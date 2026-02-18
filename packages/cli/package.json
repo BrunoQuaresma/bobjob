@@ -7,7 +7,8 @@
   },
   "scripts": {
     "start": "bun run src/index.ts",
-    "resume": "bun run src/index.ts resume"
+    "resume": "bun run src/index.ts resume",
+    "test": "bun test"
   },
   "dependencies": {
     "@bobjob/core": "workspace:*",
