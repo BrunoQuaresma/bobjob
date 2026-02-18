@@ -20,6 +20,7 @@ export {
   incorporateClarificationsIntoSummary,
   type Clarification,
 } from './llm/incorporate-clarifications';
+export { generateJobTailoredResume } from './llm/generate-job-tailored-resume';
 export {
   fetchJobDescription,
   type FetchJobDescriptionOptions,
