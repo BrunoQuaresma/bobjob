@@ -1,5 +1,6 @@
 {
   "name": "@bobjob/cli",
+  "version": "0.0.0",
   "type": "module",
   "bin": {
     "bobjob": "./src/index.ts"
@@ -9,7 +10,8 @@
     "resume": "bun run src/index.ts resume"
   },
   "dependencies": {
-    "@bobjob/core": "workspace:*"
+    "@bobjob/core": "workspace:*",
+    "commander": "^14"
   },
   "devDependencies": {
     "@types/bun": "latest",

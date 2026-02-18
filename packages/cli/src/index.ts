@@ -1,45 +1,30 @@
+import { Command } from 'commander';
+import { join } from 'node:path';
 import { runResume } from './commands/resume';
 
-const args = process.argv.slice(2);
-const command = args[0];
+const pkg = (await Bun.file(
+  join(import.meta.dir, '../package.json')
+).json()) as {
+  version: string;
+};
 
-function printHelp(): void {
-  console.log(`
-Bob Job — Your AI job-search assistant
+const program = new Command();
 
-Usage:
-  bobjob                    Show this help
-  bobjob resume [url]       Generate a tailored resume for a job
+program
+  .name('bobjob')
+  .description('Bob Job — Your AI job-search assistant')
+  .version(pkg.version);
 
-Examples:
-  bobjob resume
-  bobjob resume https://example.com/jobs/senior-engineer
-
-Need help? Just run \`bobjob\` with no args to see this message.
-`);
-}
-
-async function main(): Promise<number> {
-  if (!command || command === '--help' || command === '-h') {
-    printHelp();
-    return 0;
-  }
-
-  if (command === 'resume') {
-    const url = args[1];
+program
+  .command('resume')
+  .description('Generate a tailored resume for a job')
+  .argument('[url]', 'Job description URL (or provide in chat)')
+  .action(async (url: string | undefined) => {
     await runResume(url);
-    return 0;
-  }
-
-  console.error(`Unknown command: ${command}`);
-  printHelp();
-  return 1;
-}
-
-main()
-  .then((code) => process.exit(code))
-  .catch((err) => {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`Error: ${message}`);
-    process.exit(1);
   });
+
+program.parseAsync().catch((err) => {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error(`Error: ${message}`);
+  process.exit(1);
+});
