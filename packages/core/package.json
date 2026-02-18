@@ -13,6 +13,8 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.29",
+    "ai": "^6.0.91",
     "nanoid": "^5.1.6",
     "pdf-parse": "^2.4.5",
     "zod": "^4.3.6"

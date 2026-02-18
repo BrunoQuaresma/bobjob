@@ -14,3 +14,4 @@ export {
   type WarnIfApiKeyMissingOptions,
 } from './env/validate-api-key';
 export { extractTextFromPdf } from './pdf/extract-text-from-pdf';
+export { generateSummaryFromText } from './llm/generate-summary-from-text';
