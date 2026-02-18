@@ -18,9 +18,14 @@ import {
   writeProfessionalSummary,
 } from '@bobjob/core';
 import type { ProfessionalSummary } from '@bobjob/core';
-import { input } from '@inquirer/prompts';
+import { homedir } from 'node:os';
+import { readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { setTimeout } from 'node:timers/promises';
+import { input, search, select } from '@inquirer/prompts';
+import ora from 'ora';
 import { ask, askMultiline } from '../chat/prompt';
-import { dim, error, info, warn } from '../output';
+import { dim, error, info, warn, white } from '../output';
 
 const DONE_KEYWORDS = ['done', 'skip', 'finish'];
 
@@ -31,15 +36,16 @@ function isDoneInput(value: string): boolean {
 const JOB_DESCRIPTION_PROMPT =
   'Paste the job description or enter a URL. Press Enter twice when done.';
 
-function isUrl(input: string): boolean {
-  const t = input.trim();
+function isUrl(text: string): boolean {
+  const t = text.trim();
   return (
     (t.startsWith('http://') || t.startsWith('https://')) && !t.includes('\n')
   );
 }
 
-const SOURCE_PROMPT =
-  "Do you have a resume PDF to import, or will you type/paste your info? (Enter a file path, or type 'text')";
+const SOURCE_QUESTION = 'How would you like to provide your resume?';
+const PDF_SEARCH_PROMPT = 'Search for your resume PDF';
+const PDF_SEARCH_MAX_DEPTH = 4;
 const TEXT_PROMPT =
   'Paste your resume or professional info (one line for now):';
 const NAME_PROMPT = "What's your full name?";
@@ -49,20 +55,42 @@ const EXPERIENCE_PROMPT =
 const COMPANY_PROMPT = 'What company is this for?';
 const ROLE_PROMPT = 'What role is this for?';
 
-function isTextChoice(input: string): boolean {
-  return input.trim().toLowerCase() === 'text';
+async function findPdfFiles(
+  dir: string,
+  depth: number,
+  maxDepth: number
+): Promise<string[]> {
+  if (depth >= maxDepth) return [];
+  const pdfs: string[] = [];
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const e of entries) {
+      if (e.isSymbolicLink()) continue; // Avoid following symlinks (path traversal)
+      const full = join(dir, e.name);
+      if (e.isDirectory() && !e.name.startsWith('.')) {
+        pdfs.push(...(await findPdfFiles(full, depth + 1, maxDepth)));
+      } else if (e.isFile() && e.name.toLowerCase().endsWith('.pdf')) {
+        pdfs.push(full);
+      }
+    }
+  } catch {
+    // Skip directories we can't read
+  }
+  return pdfs;
 }
 
 async function collectSummaryFromSource(): Promise<ProfessionalSummary | null> {
-  const source = await ask(SOURCE_PROMPT);
-  if (!source.trim()) {
-    console.log(warn("No input. Try again when you're ready."));
-    return null;
-  }
+  const choice = await select({
+    message: white(SOURCE_QUESTION),
+    choices: [
+      { name: 'Import PDF', value: 'pdf' },
+      { name: 'Paste text', value: 'text' },
+    ],
+  });
 
   let rawText: string;
 
-  if (isTextChoice(source)) {
+  if (choice === 'text') {
     const text = await ask(TEXT_PROMPT);
     if (!text.trim()) {
       console.log(warn("No text provided. Try again when you're ready."));
@@ -70,18 +98,64 @@ async function collectSummaryFromSource(): Promise<ProfessionalSummary | null> {
     }
     rawText = text;
   } else {
+    const home = homedir();
+    let cachedPdfs: string[] | null = null;
+
+    const filePath = await search({
+      message: white(PDF_SEARCH_PROMPT),
+      source: async (term, { signal }) => {
+        await setTimeout(300);
+        if (signal.aborted) return [];
+
+        if (!cachedPdfs) {
+          cachedPdfs = await findPdfFiles(home, 0, PDF_SEARCH_MAX_DEPTH);
+        }
+
+        const lower = (term ?? '').trim().toLowerCase();
+        const filterTerm =
+          lower === '' || lower === '~' ? '' : lower.replace(/^~\/?/, '');
+
+        const filtered = filterTerm
+          ? cachedPdfs.filter((p) => {
+              const displayPath = p.replace(home, '~').toLowerCase();
+              const pathSegments = displayPath.split(/[/\\]/);
+              return (
+                displayPath.includes(filterTerm) ||
+                pathSegments.some((seg) => seg.includes(filterTerm))
+              );
+            })
+          : cachedPdfs;
+
+        return filtered.slice(0, 50).map((path) => ({
+          value: path,
+          name: path.replace(home, '~'),
+        }));
+      },
+    });
+
+    if (!filePath?.trim()) {
+      console.log(warn("No file selected. Try again when you're ready."));
+      return null;
+    }
+    const resolved = filePath.replace(/^~/, home);
+    const extractSpinner = ora('Extracting text from PDF...').start();
     try {
-      rawText = await extractTextFromPdf(source.trim());
+      rawText = await extractTextFromPdf(resolved.trim());
+      extractSpinner.succeed('PDF extracted');
     } catch (err) {
+      extractSpinner.fail();
       console.error(error(err instanceof Error ? err.message : String(err)));
       return null;
     }
   }
 
+  const summarySpinner = ora('Generating your professional summary...').start();
   try {
     const summary = await generateSummaryFromText(rawText);
+    summarySpinner.succeed('Professional summary ready');
     return summary;
   } catch (err) {
+    summarySpinner.fail();
     console.error(error(err instanceof Error ? err.message : String(err)));
     return null;
   }
@@ -127,10 +201,12 @@ async function fillGaps(
     if (!hasExperiences && !hasEducation) {
       const expText = await ask(EXPERIENCE_PROMPT);
       if (expText.trim()) {
+        const parseSpinner = ora('Parsing experience...').start();
         try {
           const parsed = await generateSummaryFromText(
             `Work experience or education: ${expText}`
           );
+          parseSpinner.succeed();
           if (
             Array.isArray(parsed.experiences) &&
             parsed.experiences.length > 0
@@ -151,11 +227,13 @@ async function fillGaps(
               education: [...(current.education ?? []), ...parsed.education],
             };
           } else {
+            parseSpinner.fail();
             console.log(
               warn("Couldn't parse that. Try again with a clearer format.")
             );
           }
         } catch {
+          parseSpinner.fail();
           console.log(
             warn("Couldn't parse that. Try again with a clearer format.")
           );
@@ -175,6 +253,24 @@ type ClarificationLoopResult = {
   exitReason: 'early' | 'maxRounds' | 'error';
 };
 
+async function mergeWithSpinner(
+  summary: ProfessionalSummary,
+  clarifications: Array<{ question: string; answer: string }>
+): Promise<ProfessionalSummary> {
+  const mergeSpinner = ora('Incorporating your answers...').start();
+  try {
+    const merged = await incorporateClarificationsIntoSummary(
+      summary,
+      clarifications
+    );
+    mergeSpinner.succeed();
+    return merged;
+  } catch (err) {
+    mergeSpinner.fail();
+    throw err;
+  }
+}
+
 async function runClarificationLoop(
   summary: ProfessionalSummary,
   jobDescription: string
@@ -184,9 +280,12 @@ async function runClarificationLoop(
 
   for (let round = 0; round < maxRounds; round++) {
     let analysis;
+    const analyzeSpinner = ora('Analyzing job fit...').start();
     try {
       analysis = await analyzeJobFit(currentSummary, jobDescription);
+      analyzeSpinner.stop();
     } catch (err) {
+      analyzeSpinner.fail();
       console.error(error(err instanceof Error ? err.message : String(err)));
       return { summary: currentSummary, exitReason: 'error' };
     }
@@ -220,7 +319,7 @@ async function runClarificationLoop(
         // User cancelled (Ctrl+C) - treat as done
         if (clarifications.length > 0) {
           try {
-            currentSummary = await incorporateClarificationsIntoSummary(
+            currentSummary = await mergeWithSpinner(
               currentSummary,
               clarifications
             );
@@ -238,7 +337,7 @@ async function runClarificationLoop(
       if (isDoneInput(answer)) {
         if (clarifications.length > 0) {
           try {
-            currentSummary = await incorporateClarificationsIntoSummary(
+            currentSummary = await mergeWithSpinner(
               currentSummary,
               clarifications
             );
@@ -264,10 +363,7 @@ async function runClarificationLoop(
     }
 
     try {
-      currentSummary = await incorporateClarificationsIntoSummary(
-        currentSummary,
-        clarifications
-      );
+      currentSummary = await mergeWithSpinner(currentSummary, clarifications);
     } catch (err) {
       console.error(error(err instanceof Error ? err.message : String(err)));
       return { summary: currentSummary, exitReason: 'error' };
@@ -289,9 +385,12 @@ async function collectJobDescription(
   let jobDescription: string;
 
   if (url) {
+    const fetchSpinner = ora('Fetching job description...').start();
     try {
       jobDescription = await fetchJobDescription(url);
+      fetchSpinner.succeed('Job description fetched');
     } catch (err) {
+      fetchSpinner.fail();
       console.error(error(err instanceof Error ? err.message : String(err)));
       return null;
     }
@@ -305,9 +404,12 @@ async function collectJobDescription(
     }
 
     if (isUrl(jobInput)) {
+      const fetchSpinner = ora('Fetching job description...').start();
       try {
         jobDescription = await fetchJobDescription(jobInput.trim());
+        fetchSpinner.succeed('Job description fetched');
       } catch (err) {
+        fetchSpinner.fail();
         console.error(error(err instanceof Error ? err.message : String(err)));
         return null;
       }
@@ -319,11 +421,14 @@ async function collectJobDescription(
   let company: string;
   let jobSlug: string;
 
+  const extractSpinner = ora('Extracting company and role...').start();
   try {
     const extracted = await extractCompanyAndJobSlug(jobDescription);
     company = extracted.company?.trim() ?? '';
     jobSlug = extracted.jobSlug?.trim() ?? '';
+    extractSpinner.succeed();
   } catch (err) {
+    extractSpinner.fail();
     console.error(error(err instanceof Error ? err.message : String(err)));
     company = '';
     jobSlug = '';
@@ -361,7 +466,14 @@ export async function runResume(url?: string): Promise<void> {
   await ensureBobJobDirExists();
 
   let summary = await readProfessionalSummary({
-    onError: (msg, err) => console.error(error(msg), err),
+    onError: (msg, err) => {
+      const code =
+        err && typeof err === 'object' && 'code' in err
+          ? (err as { code: string }).code
+          : undefined;
+      if (code === 'ENOENT') return; // File doesn't exist yet — expected for first-time users
+      console.error(error(msg), err);
+    },
   });
 
   if (!summary) {
@@ -413,7 +525,7 @@ export async function runResume(url?: string): Promise<void> {
     console.log(info('Your profile has been saved.'));
   }
 
-  console.log(info('Generating your tailored resume...'));
+  const resumeSpinner = ora('Generating your tailored resume...').start();
   try {
     const tailoredResume = await generateJobTailoredResume(
       finalSummary,
@@ -422,8 +534,9 @@ export async function runResume(url?: string): Promise<void> {
     await ensureResumesDirExists();
     const outputPath = getResumeFilePath(company, jobSlug);
     await renderResumeToPdf(tailoredResume, outputPath);
-    console.log(info(`Resume saved to: ${outputPath}`));
+    resumeSpinner.succeed(`Resume saved to: ${outputPath}`);
   } catch (err) {
+    resumeSpinner.fail();
     console.error(error(err instanceof Error ? err.message : String(err)));
   }
 }
