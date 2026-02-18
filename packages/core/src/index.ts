@@ -15,3 +15,8 @@ export {
 } from './env/validate-api-key';
 export { extractTextFromPdf } from './pdf/extract-text-from-pdf';
 export { generateSummaryFromText } from './llm/generate-summary-from-text';
+export {
+  fetchJobDescription,
+  type FetchJobDescriptionOptions,
+} from './job/fetch-job-description';
+export { sanitizeJobText } from './job/sanitize-job-text';

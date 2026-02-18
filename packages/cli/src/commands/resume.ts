@@ -1,15 +1,27 @@
 import {
   ensureBobJobDirExists,
   extractTextFromPdf,
+  fetchJobDescription,
   generateSummaryFromText,
   hasMinimumFields,
   readProfessionalSummary,
+  sanitizeJobText,
   warnIfApiKeyMissing,
   writeProfessionalSummary,
 } from '@bobjob/core';
 import type { ProfessionalSummary } from '@bobjob/core';
-import { ask } from '../chat/prompt';
+import { ask, askMultiline } from '../chat/prompt';
 import { dim, error, info, warn } from '../output';
+
+const JOB_DESCRIPTION_PROMPT =
+  'Paste the job description or enter a URL. Press Enter twice when done.';
+
+function isUrl(input: string): boolean {
+  const t = input.trim();
+  return (
+    (t.startsWith('http://') || t.startsWith('https://')) && !t.includes('\n')
+  );
+}
 
 const SOURCE_PROMPT =
   "Do you have a resume PDF to import, or will you type/paste your info? (Enter a file path, or type 'text')";
@@ -141,6 +153,36 @@ async function fillGaps(
   return current;
 }
 
+async function collectJobDescription(url?: string): Promise<string | null> {
+  if (url) {
+    try {
+      return await fetchJobDescription(url);
+    } catch (err) {
+      console.error(error(err instanceof Error ? err.message : String(err)));
+      return null;
+    }
+  }
+
+  const input = await askMultiline(JOB_DESCRIPTION_PROMPT);
+  if (!input.trim()) {
+    console.log(
+      warn("No job description provided. Run again when you're ready.")
+    );
+    return null;
+  }
+
+  if (isUrl(input)) {
+    try {
+      return await fetchJobDescription(input.trim());
+    } catch (err) {
+      console.error(error(err instanceof Error ? err.message : String(err)));
+      return null;
+    }
+  }
+
+  return sanitizeJobText(input);
+}
+
 export async function runResume(url?: string): Promise<void> {
   warnIfApiKeyMissing({
     onWarn: (msg) => console.warn(warn(msg)),
@@ -177,4 +219,11 @@ export async function runResume(url?: string): Promise<void> {
 
   await writeProfessionalSummary(summary);
   console.log(info('Your professional summary is ready!'));
+
+  const jobDescription = await collectJobDescription(url);
+  if (!jobDescription) {
+    return;
+  }
+
+  console.log(info('Job description received.'));
 }
