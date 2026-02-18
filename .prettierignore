@@ -1,5 +1,6 @@
 node_modules
 dist
+packages/core/src/pdf/resume-template.hbs
 out
 bun.lock
 .agents

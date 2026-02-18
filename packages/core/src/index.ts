@@ -14,6 +14,14 @@ export {
   type WarnIfApiKeyMissingOptions,
 } from './env/validate-api-key';
 export { extractTextFromPdf } from './pdf/extract-text-from-pdf';
+export {
+  renderResumeToHtml,
+  type RenderResumeToHtmlOptions,
+} from './pdf/render-resume-to-html';
+export {
+  renderResumeToPdf,
+  type RenderResumeToPdfOptions,
+} from './pdf/render-resume-to-pdf';
 export { generateSummaryFromText } from './llm/generate-summary-from-text';
 export { analyzeJobFit, type JobFitAnalysis } from './llm/analyze-job-fit';
 export {

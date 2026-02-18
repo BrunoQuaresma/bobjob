@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <title>Resume{{#if name}} - {{name}}{{/if}}</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 11pt;
+        line-height: 1.4;
+        color: #222;
+        margin: 0;
+        padding: 0;
+      }
+      h1 {
+        font-size: 22pt;
+        font-weight: 600;
+        margin: 0 0 0.5em 0;
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        font-size: 12pt;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 1.2em 0 0.4em 0;
+        padding-bottom: 0.2em;
+        border-bottom: 1px solid #333;
+      }
+      .header {
+        margin-bottom: 1em;
+      }
+      .contact-line {
+        font-size: 10pt;
+        color: #444;
+      }
+      .contact-line a {
+        color: #444;
+        text-decoration: none;
+      }
+      .contact-line a:hover {
+        text-decoration: underline;
+      }
+      .contact-line span + span::before {
+        content: ' · ';
+      }
+      .experience-item,
+      .education-item,
+      .certificate-item,
+      .project-item {
+        margin-bottom: 1em;
+      }
+      .experience-item:last-child,
+      .education-item:last-child {
+        margin-bottom: 0;
+      }
+      .item-title {
+        font-weight: 600;
+      }
+      .item-meta {
+        font-size: 10pt;
+        color: #555;
+        margin-top: 0.2em;
+      }
+      .item-description {
+        margin-top: 0.4em;
+      }
+      .highlights {
+        margin-top: 0.4em;
+        padding-left: 1.2em;
+      }
+      .highlights li {
+        margin-bottom: 0.2em;
+      }
+      .technologies {
+        font-size: 10pt;
+        color: #555;
+        margin-top: 0.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <header class='header'>
+      {{#if name}}<h1>{{name}}</h1>{{/if}}
+      {{#if contact}}
+        <div class='contact-line'>
+          {{#if contact.email}}<a
+              href='mailto:{{contact.email}}'
+            >{{contact.email}}</a>{{/if}}
+          {{#if contact.phone}}<span>{{contact.phone}}</span>{{/if}}
+          {{#if socials}}{{#if socials.linkedin}}<a
+                href='{{socials.linkedin}}'
+              >LinkedIn</a>{{/if}}
+            {{#if socials.github}}<a href='{{socials.github}}'>GitHub</a>{{/if}}
+            {{#if socials.portfolio}}<a
+                href='{{socials.portfolio}}'
+              >Portfolio</a>{{/if}}{{/if}}
+          {{#if location}}<span>{{location}}</span>{{/if}}
+        </div>
+      {{/if}}
+    </header>
+
+    {{#if (hasItems experiences)}}
+      <section>
+        <h2>Experience</h2>
+        {{#each experiences}}
+          <div class='experience-item'>
+            <div class='item-title'>{{title}}{{#if company}}
+                at
+                {{company}}{{/if}}</div>
+            <div class='item-meta'>
+              {{#if location}}{{location}}{{/if}}
+              {{#if startDate}}{{formatDate startDate}}{{/if}}
+              {{#if endDate}} – {{formatDate endDate}}{{else}} – Present{{/if}}
+            </div>
+            {{#if description}}<div
+                class='item-description'
+              >{{description}}</div>{{/if}}
+            {{#if highlights}}
+              <ul class='highlights'>
+                {{#each highlights}}<li>{{this}}</li>{{/each}}
+              </ul>
+            {{/if}}
+          </div>
+        {{/each}}
+      </section>
+    {{/if}}
+
+    {{#if (hasItems education)}}
+      <section>
+        <h2>Education</h2>
+        {{#each education}}
+          <div class='education-item'>
+            <div class='item-title'>{{degree}}{{#if field}}
+                in
+                {{field}}{{/if}}{{#if school}} — {{school}}{{/if}}</div>
+            <div class='item-meta'>
+              {{#if location}}{{location}}{{/if}}
+              {{formatDate startDate}}
+              –
+              {{formatDate endDate}}
+            </div>
+          </div>
+        {{/each}}
+      </section>
+    {{/if}}
+
+    {{#if (hasItems certificates)}}
+      <section>
+        <h2>Certificates</h2>
+        {{#each certificates}}
+          <div class='certificate-item'>
+            <div class='item-title'>{{name}}{{#if issuer}}
+                —
+                {{issuer}}{{/if}}</div>
+            {{#if date}}<div class='item-meta'>{{formatDate date}}</div>{{/if}}
+          </div>
+        {{/each}}
+      </section>
+    {{/if}}
+
+    {{#if (hasItems projects)}}
+      <section>
+        <h2>Projects</h2>
+        {{#each projects}}
+          <div class='project-item'>
+            <div class='item-title'>{{name}}{{#if url}}
+                —
+                <a href='{{url}}'>{{url}}</a>{{/if}}</div>
+            {{#if description}}<div
+                class='item-description'
+              >{{description}}</div>{{/if}}
+            {{#if technologies}}<div class='technologies'>{{#each
+                  technologies
+                }}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</div>{{/if}}
+            {{#if highlights}}
+              <ul class='highlights'>
+                {{#each highlights}}<li>{{this}}</li>{{/each}}
+              </ul>
+            {{/if}}
+          </div>
+        {{/each}}
+      </section>
+    {{/if}}
+  </body>
+</html>
