@@ -1,0 +1,27 @@
+---
+description: Verify code changes with lint, format, typecheck, and tests
+alwaysApply: true
+---
+
+# Verify Changes Before Completing
+
+Before considering code changes complete, run the full check suite to ensure quality:
+
+```sh
+bun run check
+```
+
+This runs (in order): format check, lint, typecheck, and tests.
+
+## Individual Commands
+
+- **Fix lint issues**: `bun run lint:fix`
+- **Fix format issues**: `bun run format`
+- **Typecheck only**: `bun run typecheck`
+- **Tests only**: `bun run core:test`
+
+## Workflow
+
+1. After making edits, run `bun run lint:fix` and `bun run format` to auto-fix issues.
+2. Run `bun run check` to verify everything passes.
+3. If `check` fails, fix the reported issues before finishing.
