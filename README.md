@@ -12,11 +12,7 @@ AI job-search assistant. CLI resume generator from professional summary + job de
 bun install
 ```
 
-For job URL fetching (when using `bobjob resume <url>`), install Playwright Chromium:
-
-```bash
-bunx playwright install chromium
-```
+Chromium is bundled via `@playwright/browser-chromium`—no extra install step needed for job URL fetching.
 
 ## Environment
 
