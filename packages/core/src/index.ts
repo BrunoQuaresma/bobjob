@@ -17,6 +17,10 @@ export { extractTextFromPdf } from './pdf/extract-text-from-pdf';
 export { generateSummaryFromText } from './llm/generate-summary-from-text';
 export { analyzeJobFit, type JobFitAnalysis } from './llm/analyze-job-fit';
 export {
+  incorporateClarificationsIntoSummary,
+  type Clarification,
+} from './llm/incorporate-clarifications';
+export {
   fetchJobDescription,
   type FetchJobDescriptionOptions,
 } from './job/fetch-job-description';
