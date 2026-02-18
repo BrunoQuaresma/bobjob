@@ -26,4 +26,63 @@ describe('paths', () => {
     const dir = getResumesDir();
     expect(dir).toBe(`${TEST_HOME}/.bobjob/resumes`);
   });
+
+  it('getResumeFilePath returns path with kebab-case company and job slug', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    const path = getResumeFilePath('Acme Corp', 'Senior Engineer');
+    expect(path).toMatch(
+      new RegExp(
+        `^${TEST_HOME}/.bobjob/resumes/acme-corp-senior-engineer-[a-zA-Z0-9_-]+\\.pdf$`
+      )
+    );
+  });
+
+  it('getResumeFilePath normalizes special characters to kebab-case', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    const path = getResumeFilePath('Foo & Bar Inc.', 'Dev-Ops_Role');
+    // Underscores and & are stripped; spaces become hyphens
+    expect(path).toMatch(
+      new RegExp(
+        `^${TEST_HOME}/.bobjob/resumes/foo--bar-inc-dev-opsrole-[a-zA-Z0-9_-]+\\.pdf$`
+      )
+    );
+  });
+
+  it('getResumeFilePath throws when company is empty', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    expect(() => getResumeFilePath('', 'engineer')).toThrow(
+      'company must be a non-empty string'
+    );
+  });
+
+  it('getResumeFilePath throws when jobSlug is empty', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    expect(() => getResumeFilePath('Acme', '')).toThrow(
+      'jobSlug must be a non-empty string'
+    );
+  });
+
+  it('getResumeFilePath throws when company is whitespace only', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    expect(() => getResumeFilePath('   ', 'engineer')).toThrow(
+      'company must be a non-empty string'
+    );
+  });
+
+  it('getResumeFilePath throws when jobSlug is whitespace only', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    expect(() => getResumeFilePath('Acme', '   ')).toThrow(
+      'jobSlug must be a non-empty string'
+    );
+  });
+
+  it('getResumeFilePath uses fallback when slugify produces empty string', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    const path = getResumeFilePath('...', '!!!');
+    expect(path).toMatch(
+      new RegExp(
+        `^${TEST_HOME}/.bobjob/resumes/company-role-[a-zA-Z0-9_-]+\\.pdf$`
+      )
+    );
+  });
 });
