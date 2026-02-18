@@ -1,9 +1,12 @@
 import { warnIfApiKeyMissing } from '@bobjob/core';
+import { dim, info, warn } from '../output';
 
 export async function runResume(url?: string): Promise<void> {
-  warnIfApiKeyMissing();
-  console.log('Resume flow coming soon!');
+  warnIfApiKeyMissing({
+    onWarn: (msg) => console.warn(warn(msg)),
+  });
+  console.log(info('Resume flow coming soon!'));
   if (url) {
-    console.log(`(Job URL: ${url})`);
+    console.log(dim(`(Job URL: ${url})`));
   }
 }

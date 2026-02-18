@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { join } from 'node:path';
 import { runResume } from './commands/resume';
+import { error } from './output';
 
 const pkg = (await Bun.file(
   join(import.meta.dir, '../package.json')
@@ -25,6 +26,6 @@ program
 
 program.parseAsync().catch((err) => {
   const message = err instanceof Error ? err.message : String(err);
-  console.error(`Error: ${message}`);
+  console.error(error(`Error: ${message}`));
   process.exit(1);
 });

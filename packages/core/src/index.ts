@@ -8,4 +8,8 @@ export {
   type ReadProfessionalSummaryOptions,
 } from './storage/professional-summary';
 export { hasMinimumFields } from './validation/has-minimum-fields';
-export { validateApiKey, warnIfApiKeyMissing } from './env/validate-api-key';
+export {
+  validateApiKey,
+  warnIfApiKeyMissing,
+  type WarnIfApiKeyMissingOptions,
+} from './env/validate-api-key';
