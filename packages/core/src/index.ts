@@ -7,4 +7,5 @@ export {
   ensureResumesDirExists,
   type ReadProfessionalSummaryOptions,
 } from './storage/professional-summary';
+export { hasMinimumFields } from './validation/has-minimum-fields';
 export { validateApiKey, warnIfApiKeyMissing } from './env/validate-api-key';
