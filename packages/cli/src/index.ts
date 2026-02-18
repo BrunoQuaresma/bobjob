@@ -39,6 +39,7 @@ async function main(): Promise<number> {
 main()
   .then((code) => process.exit(code))
   .catch((err) => {
-    console.error(err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Error: ${message}`);
     process.exit(1);
   });
