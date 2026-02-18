@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run core:test"
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run core:test && bun run cli:test",
+    "cli:test": "bun run --filter @bobjob/cli test"
   },
   "devDependencies": {
     "@eslint/js": "^9",
