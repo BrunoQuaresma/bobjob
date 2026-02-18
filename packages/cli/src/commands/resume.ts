@@ -1,17 +1,26 @@
 import {
+  analyzeJobFit,
   ensureBobJobDirExists,
   extractTextFromPdf,
   fetchJobDescription,
   generateSummaryFromText,
   hasMinimumFields,
+  incorporateClarificationsIntoSummary,
   readProfessionalSummary,
   sanitizeJobText,
   warnIfApiKeyMissing,
   writeProfessionalSummary,
 } from '@bobjob/core';
 import type { ProfessionalSummary } from '@bobjob/core';
+import { input } from '@inquirer/prompts';
 import { ask, askMultiline } from '../chat/prompt';
 import { dim, error, info, warn } from '../output';
+
+const DONE_KEYWORDS = ['done', 'skip', 'finish'];
+
+function isDoneInput(value: string): boolean {
+  return DONE_KEYWORDS.includes(value.trim().toLowerCase());
+}
 
 const JOB_DESCRIPTION_PROMPT =
   'Paste the job description or enter a URL. Press Enter twice when done.';
@@ -153,6 +162,113 @@ async function fillGaps(
   return current;
 }
 
+type ClarificationLoopResult = {
+  summary: ProfessionalSummary;
+  exitReason: 'early' | 'maxRounds' | 'error';
+};
+
+async function runClarificationLoop(
+  summary: ProfessionalSummary,
+  jobDescription: string
+): Promise<ClarificationLoopResult> {
+  const maxRounds = 5;
+  let currentSummary = summary;
+
+  for (let round = 0; round < maxRounds; round++) {
+    let analysis;
+    try {
+      analysis = await analyzeJobFit(currentSummary, jobDescription);
+    } catch (err) {
+      console.error(error(err instanceof Error ? err.message : String(err)));
+      return { summary: currentSummary, exitReason: 'error' };
+    }
+
+    console.log(
+      info(`Match score: ${analysis.matchScore}/100 — ${analysis.rationale}`)
+    );
+
+    if (
+      analysis.matchScore >= 85 ||
+      analysis.clarificationQuestions.length === 0
+    ) {
+      return { summary: currentSummary, exitReason: 'early' };
+    }
+
+    console.log(info('To improve your match, consider answering:'));
+
+    const clarifications: Array<{ question: string; answer: string }> = [];
+    const totalQuestions = analysis.clarificationQuestions.length;
+
+    for (let i = 0; i < totalQuestions; i++) {
+      const question = analysis.clarificationQuestions[i];
+      if (question == null) continue;
+
+      const message = `Question ${i + 1} of ${totalQuestions}. ${question}`;
+
+      let answer: string;
+      try {
+        answer = (await input({ message })) ?? '';
+      } catch {
+        // User cancelled (Ctrl+C) - treat as done
+        if (clarifications.length > 0) {
+          try {
+            currentSummary = await incorporateClarificationsIntoSummary(
+              currentSummary,
+              clarifications
+            );
+          } catch (mergeErr) {
+            console.error(
+              error(
+                mergeErr instanceof Error ? mergeErr.message : String(mergeErr)
+              )
+            );
+          }
+        }
+        return { summary: currentSummary, exitReason: 'early' };
+      }
+
+      if (isDoneInput(answer)) {
+        if (clarifications.length > 0) {
+          try {
+            currentSummary = await incorporateClarificationsIntoSummary(
+              currentSummary,
+              clarifications
+            );
+          } catch (mergeErr) {
+            console.error(
+              error(
+                mergeErr instanceof Error ? mergeErr.message : String(mergeErr)
+              )
+            );
+          }
+        }
+        return { summary: currentSummary, exitReason: 'early' };
+      }
+
+      const trimmed = answer.trim();
+      if (trimmed) {
+        clarifications.push({ question, answer: trimmed });
+      }
+    }
+
+    if (clarifications.length === 0) {
+      return { summary: currentSummary, exitReason: 'early' };
+    }
+
+    try {
+      currentSummary = await incorporateClarificationsIntoSummary(
+        currentSummary,
+        clarifications
+      );
+    } catch (err) {
+      console.error(error(err instanceof Error ? err.message : String(err)));
+      return { summary: currentSummary, exitReason: 'error' };
+    }
+  }
+
+  return { summary: currentSummary, exitReason: 'maxRounds' };
+}
+
 async function collectJobDescription(url?: string): Promise<string | null> {
   if (url) {
     try {
@@ -163,24 +279,24 @@ async function collectJobDescription(url?: string): Promise<string | null> {
     }
   }
 
-  const input = await askMultiline(JOB_DESCRIPTION_PROMPT);
-  if (!input.trim()) {
+  const jobInput = await askMultiline(JOB_DESCRIPTION_PROMPT);
+  if (!jobInput.trim()) {
     console.log(
       warn("No job description provided. Run again when you're ready.")
     );
     return null;
   }
 
-  if (isUrl(input)) {
+  if (isUrl(jobInput)) {
     try {
-      return await fetchJobDescription(input.trim());
+      return await fetchJobDescription(jobInput.trim());
     } catch (err) {
       console.error(error(err instanceof Error ? err.message : String(err)));
       return null;
     }
   }
 
-  return sanitizeJobText(input);
+  return sanitizeJobText(jobInput);
 }
 
 export async function runResume(url?: string): Promise<void> {
@@ -226,4 +342,23 @@ export async function runResume(url?: string): Promise<void> {
   }
 
   console.log(info('Job description received.'));
+
+  const { summary: finalSummary, exitReason } = await runClarificationLoop(
+    summary,
+    jobDescription
+  );
+
+  await writeProfessionalSummary(finalSummary);
+
+  if (exitReason === 'early') {
+    console.log(info('Great match! Your profile is ready for the next step.'));
+  } else if (exitReason === 'maxRounds') {
+    console.log(
+      info(
+        "We've reached the max rounds. Your profile is ready for the next step."
+      )
+    );
+  } else {
+    console.log(info('Your profile has been saved.'));
+  }
 }
