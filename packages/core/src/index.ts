@@ -13,3 +13,4 @@ export {
   warnIfApiKeyMissing,
   type WarnIfApiKeyMissingOptions,
 } from './env/validate-api-key';
+export { extractTextFromPdf } from './pdf/extract-text-from-pdf';
