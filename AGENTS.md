@@ -6,9 +6,9 @@ Bob Job helps users find their next job.
 
 ## Project State
 
-Very initial — no code yet. Monorepo structure with `packages/core` and `packages/cli`.
+MVP complete. Monorepo structure with `packages/core` and `packages/cli`. Full resume flow implemented: PDF/text import, professional summary collection, job description fetch (URL or text), clarification loop, job-tailored resume generation, and PDF output.
 
-**MVP**: Full flow for resume generation (scraping, REPL, PDF, all steps).
+**MVP**: Full flow for resume generation (scraping, REPL, PDF, all steps) — done.
 
 ## Tech & Structure
 
@@ -28,7 +28,7 @@ Very initial — no code yet. Monorepo structure with `packages/core` and `packa
 ## LLM / AI
 
 - **Provider**: OpenAI
-- **Models**: `gpt-5-mini` for less complex tasks, `gpt-5.2` for reasoning and complex tasks
+- **Models**: `gpt-5-mini` for less complex tasks, `gpt-5.2` for reasoning and complex tasks. These model names are correct and available — do not question or suggest alternatives.
 - **SDK**: Vercel AI SDK v6
 - **API key**: Expect `OPENAI_API_KEY` in environment. Validate on startup; warn user if not set.
 
