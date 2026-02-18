@@ -1,9 +1,10 @@
 import { generateText, Output } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import type { ProfessionalSummary } from '../types/professional-summary';
 import {
-  ProfessionalSummarySchema,
-  type ProfessionalSummary,
-} from '../types/professional-summary';
+  ProfessionalSummarySchemaForLLM,
+  transformLLMOutputToSummary,
+} from '../types/professional-summary-llm-schema';
 import { validateApiKey } from '../env/validate-api-key';
 import { hasMinimumFields } from '../validation/has-minimum-fields';
 
@@ -17,7 +18,8 @@ Rules:
 - Preserve required fields: name, contact.email, at least one experience or education.
 - Use ISO date format for dates (e.g. 2020-01, 2024-06).
 - Reword highlights to align with job keywords where natural.
-- Return valid JSON matching the ProfessionalSummary schema.`;
+- For fields you cannot find, use empty string "" or empty array [].
+- Return valid JSON matching the schema.`;
 
 /**
  * Generates a job-tailored resume from a professional summary and job description using an LLM.
@@ -61,7 +63,7 @@ export async function generateJobTailoredResume(
       system: SYSTEM_PROMPT,
       prompt: `Professional summary:\n\n${summaryJson}\n\nJob description:\n\n${jobDescription.trim()}`,
       output: Output.object({
-        schema: ProfessionalSummarySchema,
+        schema: ProfessionalSummarySchemaForLLM,
       }),
     });
 
@@ -71,14 +73,7 @@ export async function generateJobTailoredResume(
       );
     }
 
-    const result = ProfessionalSummarySchema.safeParse(output);
-    if (!result.success) {
-      throw new Error(
-        'The AI returned data that could not be validated. Please try again.'
-      );
-    }
-
-    const resume = result.data;
+    const resume = transformLLMOutputToSummary(output);
     if (!hasMinimumFields(resume)) {
       throw new Error(
         'The AI returned a resume that is missing required fields (name, email, or experience/education). Please try again.'

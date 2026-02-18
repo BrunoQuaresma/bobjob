@@ -1,9 +1,10 @@
 import { generateText, Output } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import type { ProfessionalSummary } from '../types/professional-summary';
 import {
-  ProfessionalSummarySchema,
-  type ProfessionalSummary,
-} from '../types/professional-summary';
+  ProfessionalSummarySchemaForLLM,
+  transformLLMOutputToSummary,
+} from '../types/professional-summary-llm-schema';
 import { validateApiKey } from '../env/validate-api-key';
 
 const SYSTEM_PROMPT = `You are an expert at merging professional information. Given an existing professional summary and clarification Q&A pairs from the candidate, return an updated professional summary that incorporates the new information.
@@ -12,7 +13,8 @@ Rules:
 - Preserve all existing data; do not remove or alter information unless the clarification directly updates it.
 - Add or enrich experiences, education, highlights, or descriptions based on the answers.
 - Use ISO date format for dates (e.g. 2020-01, 2024-06).
-- Return valid JSON matching the ProfessionalSummary schema.
+- For fields you cannot find, use empty string "" or empty array [].
+- Return valid JSON matching the schema.
 
 Return only the updated JSON, no other text.`;
 
@@ -52,7 +54,7 @@ export async function incorporateClarificationsIntoSummary(
       system: SYSTEM_PROMPT,
       prompt,
       output: Output.object({
-        schema: ProfessionalSummarySchema,
+        schema: ProfessionalSummarySchemaForLLM,
       }),
     });
 
@@ -62,14 +64,7 @@ export async function incorporateClarificationsIntoSummary(
       );
     }
 
-    const result = ProfessionalSummarySchema.safeParse(output);
-    if (!result.success) {
-      throw new Error(
-        'The AI returned data that could not be validated. Please try again.'
-      );
-    }
-
-    return result.data;
+    return transformLLMOutputToSummary(output);
   } catch (err) {
     if (err instanceof Error) {
       if (err.message.includes('OPENAI_API_KEY')) {
