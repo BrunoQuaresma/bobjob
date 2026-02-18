@@ -1,12 +1,17 @@
 import {
   analyzeJobFit,
   ensureBobJobDirExists,
+  ensureResumesDirExists,
+  extractCompanyAndJobSlug,
   extractTextFromPdf,
   fetchJobDescription,
+  generateJobTailoredResume,
   generateSummaryFromText,
+  getResumeFilePath,
   hasMinimumFields,
   incorporateClarificationsIntoSummary,
   readProfessionalSummary,
+  renderResumeToPdf,
   sanitizeJobText,
   warnIfApiKeyMissing,
   writeProfessionalSummary,
@@ -40,6 +45,8 @@ const NAME_PROMPT = "What's your full name?";
 const EMAIL_PROMPT = "What's your email?";
 const EXPERIENCE_PROMPT =
   "Tell me about one work experience or education (e.g. 'Software Engineer at Acme, 2020-2023'):";
+const COMPANY_PROMPT = 'What company is this for?';
+const ROLE_PROMPT = 'What role is this for?';
 
 function isTextChoice(input: string): boolean {
   return input.trim().toLowerCase() === 'text';
@@ -269,34 +276,73 @@ async function runClarificationLoop(
   return { summary: currentSummary, exitReason: 'maxRounds' };
 }
 
-async function collectJobDescription(url?: string): Promise<string | null> {
+type JobDescriptionResult = {
+  jobDescription: string;
+  company: string;
+  jobSlug: string;
+};
+
+async function collectJobDescription(
+  url?: string
+): Promise<JobDescriptionResult | null> {
+  let jobDescription: string;
+
   if (url) {
     try {
-      return await fetchJobDescription(url);
+      jobDescription = await fetchJobDescription(url);
     } catch (err) {
       console.error(error(err instanceof Error ? err.message : String(err)));
       return null;
     }
-  }
-
-  const jobInput = await askMultiline(JOB_DESCRIPTION_PROMPT);
-  if (!jobInput.trim()) {
-    console.log(
-      warn("No job description provided. Run again when you're ready.")
-    );
-    return null;
-  }
-
-  if (isUrl(jobInput)) {
-    try {
-      return await fetchJobDescription(jobInput.trim());
-    } catch (err) {
-      console.error(error(err instanceof Error ? err.message : String(err)));
+  } else {
+    const jobInput = await askMultiline(JOB_DESCRIPTION_PROMPT);
+    if (!jobInput.trim()) {
+      console.log(
+        warn("No job description provided. Run again when you're ready.")
+      );
       return null;
+    }
+
+    if (isUrl(jobInput)) {
+      try {
+        jobDescription = await fetchJobDescription(jobInput.trim());
+      } catch (err) {
+        console.error(error(err instanceof Error ? err.message : String(err)));
+        return null;
+      }
+    } else {
+      jobDescription = sanitizeJobText(jobInput);
     }
   }
 
-  return sanitizeJobText(jobInput);
+  let company: string;
+  let jobSlug: string;
+
+  try {
+    const extracted = await extractCompanyAndJobSlug(jobDescription);
+    company = extracted.company?.trim() ?? '';
+    jobSlug = extracted.jobSlug?.trim() ?? '';
+  } catch (err) {
+    console.error(error(err instanceof Error ? err.message : String(err)));
+    company = '';
+    jobSlug = '';
+  }
+
+  while (!company) {
+    const answer = await ask(COMPANY_PROMPT);
+    if (answer.trim()) {
+      company = answer.trim();
+    }
+  }
+
+  while (!jobSlug) {
+    const answer = await ask(ROLE_PROMPT);
+    if (answer.trim()) {
+      jobSlug = answer.trim();
+    }
+  }
+
+  return { jobDescription, company, jobSlug };
 }
 
 export async function runResume(url?: string): Promise<void> {
@@ -336,11 +382,12 @@ export async function runResume(url?: string): Promise<void> {
   await writeProfessionalSummary(summary);
   console.log(info('Your professional summary is ready!'));
 
-  const jobDescription = await collectJobDescription(url);
-  if (!jobDescription) {
+  const jobData = await collectJobDescription(url);
+  if (!jobData) {
     return;
   }
 
+  const { jobDescription, company, jobSlug } = jobData;
   console.log(info('Job description received.'));
 
   const { summary: finalSummary, exitReason } = await runClarificationLoop(
@@ -360,5 +407,19 @@ export async function runResume(url?: string): Promise<void> {
     );
   } else {
     console.log(info('Your profile has been saved.'));
+  }
+
+  console.log(info('Generating your tailored resume...'));
+  try {
+    const tailoredResume = await generateJobTailoredResume(
+      finalSummary,
+      jobDescription
+    );
+    await ensureResumesDirExists();
+    const outputPath = getResumeFilePath(company, jobSlug);
+    await renderResumeToPdf(tailoredResume, outputPath);
+    console.log(info(`Resume saved to: ${outputPath}`));
+  } catch (err) {
+    console.error(error(err instanceof Error ? err.message : String(err)));
   }
 }

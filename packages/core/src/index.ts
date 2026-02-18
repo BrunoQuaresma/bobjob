@@ -33,4 +33,8 @@ export {
   fetchJobDescription,
   type FetchJobDescriptionOptions,
 } from './job/fetch-job-description';
+export {
+  extractCompanyAndJobSlug,
+  type ExtractCompanyAndJobSlugResult,
+} from './job/extract-company-and-job-slug';
 export { sanitizeJobText } from './job/sanitize-job-text';
