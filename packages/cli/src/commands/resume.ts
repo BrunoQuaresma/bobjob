@@ -13,6 +13,7 @@ import {
   readProfessionalSummary,
   renderResumeToPdf,
   sanitizeJobText,
+  validateApiKey,
   warnIfApiKeyMissing,
   writeProfessionalSummary,
 } from '@bobjob/core';
@@ -349,6 +350,9 @@ export async function runResume(url?: string): Promise<void> {
   warnIfApiKeyMissing({
     onWarn: (msg) => console.warn(warn(msg)),
   });
+  if (!validateApiKey()) {
+    return;
+  }
 
   if (url) {
     console.log(dim(`(Job URL: ${url})`));
