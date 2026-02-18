@@ -15,6 +15,7 @@ export {
 } from './env/validate-api-key';
 export { extractTextFromPdf } from './pdf/extract-text-from-pdf';
 export { generateSummaryFromText } from './llm/generate-summary-from-text';
+export { analyzeJobFit, type JobFitAnalysis } from './llm/analyze-job-fit';
 export {
   fetchJobDescription,
   type FetchJobDescriptionOptions,
