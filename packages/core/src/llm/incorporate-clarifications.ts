@@ -48,7 +48,7 @@ export async function incorporateClarificationsIntoSummary(
 
   try {
     const { output } = await generateText({
-      model: openai('gpt-4o-mini'),
+      model: openai('gpt-5-mini'),
       system: SYSTEM_PROMPT,
       prompt,
       output: Output.object({

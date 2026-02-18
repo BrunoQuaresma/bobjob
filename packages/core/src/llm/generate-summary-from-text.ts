@@ -35,7 +35,7 @@ export async function generateSummaryFromText(
 
   try {
     const { output } = await generateText({
-      model: openai('gpt-4o-mini'),
+      model: openai('gpt-5-mini'),
       system: SYSTEM_PROMPT,
       prompt: `Extract professional summary from this resume text:\n\n${rawText}`,
       output: Output.object({
