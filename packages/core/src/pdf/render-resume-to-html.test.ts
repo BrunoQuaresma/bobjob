@@ -102,4 +102,24 @@ describe('renderResumeToHtml', () => {
 
     expect(html).toContain('15 Jan 2020');
   });
+
+  it('renders contact section with location last', async () => {
+    const resume: ProfessionalSummary = {
+      name: 'Jane Doe',
+      contact: { email: 'jane@example.com' },
+      location: 'San Francisco, CA',
+      socials: { linkedin: 'https://linkedin.com/in/jane' },
+      experiences: [
+        { title: 'Engineer', company: 'Acme', startDate: '2020-01' },
+      ],
+    };
+
+    const html = await renderResumeToHtml(resume);
+
+    const linkedinPos = html.indexOf('LinkedIn');
+    const locationPos = html.indexOf('San Francisco, CA');
+    expect(linkedinPos).toBeGreaterThan(-1);
+    expect(locationPos).toBeGreaterThan(-1);
+    expect(locationPos).toBeGreaterThan(linkedinPos);
+  });
 });

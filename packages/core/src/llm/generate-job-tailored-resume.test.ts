@@ -188,4 +188,41 @@ describe('generateJobTailoredResume', () => {
       generateJobTailoredResume(validSummary, jobDescription)
     ).rejects.toThrow('could not be validated');
   });
+
+  it('strips parentheses from skills and limits to 8', async () => {
+    process.env.OPENAI_API_KEY = 'sk-test';
+    mockOutput = {
+      ...tailoredResume,
+      skills: [
+        'React (hooks, performance optimization)',
+        'TypeScript',
+        'Node.js (backend)',
+        'Python',
+        'AWS',
+        'Docker',
+        'SQL',
+        'GraphQL',
+        'Kubernetes',
+        'CI/CD',
+      ],
+    };
+
+    const { generateJobTailoredResume } =
+      await import('./generate-job-tailored-resume');
+    const result = await generateJobTailoredResume(
+      validSummary,
+      jobDescription
+    );
+
+    expect(result.skills).toEqual([
+      'React',
+      'TypeScript',
+      'Node.js',
+      'Python',
+      'AWS',
+      'Docker',
+      'SQL',
+      'GraphQL',
+    ]);
+  });
 });

@@ -208,9 +208,6 @@
                 <div class='contact-item'>{{contact.phone}}</div>
               {{/if}}
             {{/if}}
-            {{#if location}}
-              <div class='contact-item'>{{location}}</div>
-            {{/if}}
             {{#if socials}}
               {{#if socials.linkedin}}
                 <div class='contact-item'>
@@ -227,6 +224,9 @@
                   <a href='{{socials.portfolio}}'>Portfolio</a>
                 </div>
               {{/if}}
+            {{/if}}
+            {{#if location}}
+              <div class='contact-item'>{{location}}</div>
             {{/if}}
           </section>
         {{/if}}

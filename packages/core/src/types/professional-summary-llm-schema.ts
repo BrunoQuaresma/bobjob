@@ -139,7 +139,12 @@ export function transformLLMOutputToSummary(
       ...(p.highlights?.length && { highlights: p.highlights }),
     }));
 
-  const skills = (raw.skills ?? []).filter((s) => s && String(s).trim());
+  const MAX_SKILLS = 8;
+  const skills = (raw.skills ?? [])
+    .filter((s) => s && String(s).trim())
+    .map((s) => (String(s).split(/\s*\(/)[0] ?? '').trim())
+    .filter((s) => s.length > 0)
+    .slice(0, MAX_SKILLS);
 
   const summary: ProfessionalSummary = {
     ...(raw.name && { name: String(raw.name) }),
