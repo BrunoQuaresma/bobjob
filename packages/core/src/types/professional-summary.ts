@@ -47,9 +47,12 @@ export const ProjectSchema = z.object({
 
 export const ProfessionalSummarySchema = z.object({
   name: z.string().optional(),
+  title: z.string().optional(),
   contact: ContactSchema.optional(),
   socials: SocialsSchema.optional(),
   location: z.string().optional(),
+  summary: z.string().optional(),
+  skills: z.array(z.string()).optional(),
   experiences: z.array(ExperienceSchema).optional(),
   education: z.array(EducationSchema).optional(),
   certificates: z.array(CertificateSchema).optional(),

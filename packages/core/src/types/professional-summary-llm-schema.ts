@@ -54,9 +54,12 @@ const ProjectSchemaForLLM = z.object({
 
 export const ProfessionalSummarySchemaForLLM = z.object({
   name: z.string(),
+  title: z.string(),
   contact: ContactSchemaForLLM,
   socials: SocialsSchemaForLLM,
   location: z.string(),
+  summary: z.string(),
+  skills: z.array(z.string()),
   experiences: z.array(ExperienceSchemaForLLM),
   education: z.array(EducationSchemaForLLM),
   certificates: z.array(CertificateSchemaForLLM),
@@ -136,11 +139,17 @@ export function transformLLMOutputToSummary(
       ...(p.highlights?.length && { highlights: p.highlights }),
     }));
 
+  const skills = (raw.skills ?? []).filter((s) => s && String(s).trim());
+
   const summary: ProfessionalSummary = {
     ...(raw.name && { name: String(raw.name) }),
+    ...(raw.title && raw.title.trim() && { title: String(raw.title).trim() }),
     ...(contact && { contact }),
     ...(socials && Object.keys(socials).length > 0 && { socials }),
     ...(raw.location && { location: String(raw.location) }),
+    ...(raw.summary &&
+      raw.summary.trim() && { summary: String(raw.summary).trim() }),
+    ...(skills.length > 0 && { skills }),
     ...(experiences.length > 0 && { experiences }),
     ...(education.length > 0 && { education }),
     ...(certificates.length > 0 && { certificates }),
