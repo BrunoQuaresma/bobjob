@@ -89,7 +89,7 @@ async function findPdfFiles(
       }
     }
   } catch {
-    // Skip directories we can't read
+    // Skip directories we can't read (e.g. permission denied)
   }
   return pdfs;
 }

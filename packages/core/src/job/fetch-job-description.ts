@@ -64,12 +64,26 @@ async function defaultGetPage(
  * @returns Sanitized job description text
  * @throws Error with user-friendly message on fetch failure
  */
+function isValidJobUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.trim());
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchJobDescription(
   url: string,
   options?: FetchJobDescriptionOptions
 ): Promise<string> {
   if (typeof url !== 'string' || !url.trim()) {
     throw new Error('Please provide a valid URL.');
+  }
+  if (!isValidJobUrl(url)) {
+    throw new Error(
+      'Please provide a valid http or https URL. File and other protocols are not supported.'
+    );
   }
 
   const getPage = options?.getPage ?? defaultGetPage;

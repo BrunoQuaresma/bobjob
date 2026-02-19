@@ -96,11 +96,13 @@ export async function generateJobTailoredResume(
       throw new Error(
         "We couldn't generate your tailored resume. " +
           err.message +
-          ' Please try again.'
+          ' Please try again.',
+        { cause: err }
       );
     }
     throw new Error(
-      "We couldn't generate your tailored resume. Please try again."
+      "We couldn't generate your tailored resume. Please try again.",
+      { cause: err }
     );
   }
 }

@@ -18,6 +18,18 @@ describe('fetchJobDescription', () => {
     expect(result).toBe('Senior Engineer at Acme\n\nRequirements: 5+ years');
   });
 
+  it('throws when url uses file or non-http protocol', async () => {
+    const getPage: FetchJobDescriptionOptions['getPage'] = async () => ({
+      innerText: () => Promise.resolve(''),
+    });
+    await expect(
+      fetchJobDescription('file:///etc/passwd', { getPage })
+    ).rejects.toThrow('Please provide a valid http or https URL');
+    await expect(
+      fetchJobDescription('ftp://example.com/job', { getPage })
+    ).rejects.toThrow('Please provide a valid http or https URL');
+  });
+
   it('throws when url is empty', async () => {
     const getPage: FetchJobDescriptionOptions['getPage'] = async () => ({
       innerText: () => Promise.resolve(''),
