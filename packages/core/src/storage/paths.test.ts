@@ -27,12 +27,27 @@ describe('paths', () => {
     expect(dir).toBe(`${TEST_HOME}/.bobjob/resumes`);
   });
 
+  it('getConfigPath returns path to config.json', async () => {
+    const { getConfigPath } = await import('./paths');
+    const path = getConfigPath();
+    expect(path).toBe(`${TEST_HOME}/.bobjob/config.json`);
+  });
+
+  it('getResumeFilePath with baseDir uses custom directory', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    const customDir = '/custom/output/dir';
+    const path = getResumeFilePath('Acme', 'Engineer', customDir);
+    expect(path).toMatch(
+      new RegExp(`^${customDir}/acme-engineer-[a-zA-Z0-9_-]{5}\\.pdf$`)
+    );
+  });
+
   it('getResumeFilePath returns path with kebab-case company and job slug', async () => {
     const { getResumeFilePath } = await import('./paths');
     const path = getResumeFilePath('Acme Corp', 'Senior Engineer');
     expect(path).toMatch(
       new RegExp(
-        `^${TEST_HOME}/.bobjob/resumes/acme-corp-senior-engineer-[a-zA-Z0-9_-]+\\.pdf$`
+        `^${TEST_HOME}/.bobjob/resumes/acme-corp-senior-engineer-[a-zA-Z0-9_-]{5}\\.pdf$`
       )
     );
   });
@@ -40,10 +55,10 @@ describe('paths', () => {
   it('getResumeFilePath normalizes special characters to kebab-case', async () => {
     const { getResumeFilePath } = await import('./paths');
     const path = getResumeFilePath('Foo & Bar Inc.', 'Dev-Ops_Role');
-    // Underscores and & are stripped; spaces become hyphens
+    // Underscores and & are stripped; spaces become hyphens; multiple hyphens collapsed
     expect(path).toMatch(
       new RegExp(
-        `^${TEST_HOME}/.bobjob/resumes/foo--bar-inc-dev-opsrole-[a-zA-Z0-9_-]+\\.pdf$`
+        `^${TEST_HOME}/.bobjob/resumes/foo-bar-inc-dev-opsrole-[a-zA-Z0-9_-]{5}\\.pdf$`
       )
     );
   });
@@ -81,7 +96,7 @@ describe('paths', () => {
     const path = getResumeFilePath('...', '!!!');
     expect(path).toMatch(
       new RegExp(
-        `^${TEST_HOME}/.bobjob/resumes/company-role-[a-zA-Z0-9_-]+\\.pdf$`
+        `^${TEST_HOME}/.bobjob/resumes/company-role-[a-zA-Z0-9_-]{5}\\.pdf$`
       )
     );
   });

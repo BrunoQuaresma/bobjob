@@ -15,7 +15,15 @@ export function getResumesDir(): string {
   return join(getBobJobDir(), 'resumes');
 }
 
-export function getResumeFilePath(company: string, jobSlug: string): string {
+export function getConfigPath(): string {
+  return join(getBobJobDir(), 'config.json');
+}
+
+export function getResumeFilePath(
+  company: string,
+  jobSlug: string,
+  baseDir?: string
+): string {
   if (typeof company !== 'string' || !company.trim()) {
     throw new Error('company must be a non-empty string');
   }
@@ -27,9 +35,12 @@ export function getResumeFilePath(company: string, jobSlug: string): string {
     s
       .toLowerCase()
       .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '');
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
   const sluggedCompany = slugify(company) || 'company';
   const sluggedJobSlug = slugify(jobSlug) || 'role';
-  const id = nanoid();
-  return join(getResumesDir(), `${sluggedCompany}-${sluggedJobSlug}-${id}.pdf`);
+  const id = nanoid(5);
+  const dir = baseDir ?? getResumesDir();
+  return join(dir, `${sluggedCompany}-${sluggedJobSlug}-${id}.pdf`);
 }

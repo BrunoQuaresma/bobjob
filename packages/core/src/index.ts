@@ -7,6 +7,7 @@ export {
   ensureResumesDirExists,
   type ReadProfessionalSummaryOptions,
 } from './storage/professional-summary';
+export { readConfig, writeConfig, type BobJobConfig } from './storage/config';
 export { hasMinimumFields } from './validation/has-minimum-fields';
 export {
   validateApiKey,
