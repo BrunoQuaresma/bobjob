@@ -1,7 +1,6 @@
 import {
   analyzeJobFit,
   ensureBobJobDirExists,
-  ensureResumesDirExists,
   extractCompanyAndJobSlug,
   extractTextFromPdf,
   fetchJobDescription,
@@ -10,22 +9,24 @@ import {
   getResumeFilePath,
   hasMinimumFields,
   incorporateClarificationsIntoSummary,
+  readConfig,
   readProfessionalSummary,
   renderResumeToPdf,
   sanitizeJobText,
   validateApiKey,
   warnIfApiKeyMissing,
+  writeConfig,
   writeProfessionalSummary,
 } from '@bobjob/core';
 import type { ProfessionalSummary } from '@bobjob/core';
 import { homedir } from 'node:os';
 import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
-import { input, search, select } from '@inquirer/prompts';
+import { editor, input, search, select } from '@inquirer/prompts';
 import ora from 'ora';
-import { ask, askMultiline } from '../chat/prompt';
-import { dim, error, info, warn, white } from '../output';
+import { ask } from '../chat/prompt';
+import { cyan, dim, error, primary, success, warn } from '../output';
 
 const DONE_KEYWORDS = ['done', 'skip', 'finish'];
 
@@ -33,15 +34,28 @@ function isDoneInput(value: string): boolean {
   return DONE_KEYWORDS.includes(value.trim().toLowerCase());
 }
 
-const JOB_DESCRIPTION_PROMPT =
-  'Paste the job description or enter a URL. Press Enter twice when done.';
+const WRAP_WIDTH = 72;
 
-function isUrl(text: string): boolean {
-  const t = text.trim();
-  return (
-    (t.startsWith('http://') || t.startsWith('https://')) && !t.includes('\n')
-  );
+function wrapText(text: string, width: number = WRAP_WIDTH): string {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    if (current.length + word.length + 1 <= width) {
+      current = current ? `${current} ${word}` : word;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.join('\n');
 }
+
+const JOB_SOURCE_QUESTION =
+  'How would you like to provide the job description?';
+const JOB_URL_PROMPT = 'Enter the job URL';
+const JOB_TEXT_PROMPT = 'Paste the job description';
 
 const SOURCE_QUESTION = 'How would you like to provide your resume?';
 const PDF_SEARCH_PROMPT = 'Search for your resume PDF';
@@ -54,6 +68,7 @@ const EXPERIENCE_PROMPT =
   "Tell me about one work experience or education (e.g. 'Software Engineer at Acme, 2020-2023'):";
 const COMPANY_PROMPT = 'What company is this for?';
 const ROLE_PROMPT = 'What role is this for?';
+const SAVE_LOCATION_PROMPT = 'Where do you want to save your resume?';
 
 async function findPdfFiles(
   dir: string,
@@ -81,7 +96,7 @@ async function findPdfFiles(
 
 async function collectSummaryFromSource(): Promise<ProfessionalSummary | null> {
   const choice = await select({
-    message: white(SOURCE_QUESTION),
+    message: primary(SOURCE_QUESTION),
     choices: [
       { name: 'Import PDF', value: 'pdf' },
       { name: 'Paste text', value: 'text' },
@@ -102,7 +117,7 @@ async function collectSummaryFromSource(): Promise<ProfessionalSummary | null> {
     let cachedPdfs: string[] | null = null;
 
     const filePath = await search({
-      message: white(PDF_SEARCH_PROMPT),
+      message: primary(PDF_SEARCH_PROMPT),
       source: async (term, { signal }) => {
         await setTimeout(300);
         if (signal.aborted) return [];
@@ -257,6 +272,7 @@ async function mergeWithSpinner(
   summary: ProfessionalSummary,
   clarifications: Array<{ question: string; answer: string }>
 ): Promise<ProfessionalSummary> {
+  console.log();
   const mergeSpinner = ora('Incorporating your answers...').start();
   try {
     const merged = await incorporateClarificationsIntoSummary(
@@ -290,9 +306,15 @@ async function runClarificationLoop(
       return { summary: currentSummary, exitReason: 'error' };
     }
 
+    console.log();
+    const scoreStyle = analysis.matchScore >= 80 ? success : (s: string) => s;
     console.log(
-      info(`Match score: ${analysis.matchScore}/100 — ${analysis.rationale}`)
+      dim('Match score: ') +
+        scoreStyle(String(analysis.matchScore)) +
+        dim('/100')
     );
+    console.log();
+    console.log(wrapText(analysis.rationale));
 
     if (
       analysis.matchScore >= 85 ||
@@ -301,7 +323,13 @@ async function runClarificationLoop(
       return { summary: currentSummary, exitReason: 'early' };
     }
 
-    console.log(info('To improve your match, consider answering:'));
+    console.log();
+    console.log(
+      dim(
+        'Follow-up questions to strengthen your match. Tie answers to your experience, education, or projects. Press Ctrl+C to skip.'
+      )
+    );
+    console.log();
 
     const clarifications: Array<{ question: string; answer: string }> = [];
     const totalQuestions = analysis.clarificationQuestions.length;
@@ -310,7 +338,11 @@ async function runClarificationLoop(
       const question = analysis.clarificationQuestions[i];
       if (question == null) continue;
 
-      const message = `Question ${i + 1} of ${totalQuestions}. ${question}`;
+      if (i > 0) {
+        console.log();
+      }
+
+      const message = `${question} ${dim(`(${i + 1}/${totalQuestions})`)}\n`;
 
       let answer: string;
       try {
@@ -395,18 +427,26 @@ async function collectJobDescription(
       return null;
     }
   } else {
-    const jobInput = await askMultiline(JOB_DESCRIPTION_PROMPT);
-    if (!jobInput.trim()) {
-      console.log(
-        warn("No job description provided. Run again when you're ready.")
-      );
-      return null;
-    }
+    const sourceChoice = await select({
+      message: primary(JOB_SOURCE_QUESTION),
+      choices: [
+        { name: 'Paste text', value: 'text' },
+        { name: 'Enter URL', value: 'url' },
+      ],
+    });
 
-    if (isUrl(jobInput)) {
+    if (sourceChoice === 'url') {
+      const urlInput =
+        (await input({ message: primary(JOB_URL_PROMPT) })) ?? '';
+      if (!urlInput.trim()) {
+        console.log(
+          warn("No job description provided. Run again when you're ready.")
+        );
+        return null;
+      }
       const fetchSpinner = ora('Fetching job description...').start();
       try {
-        jobDescription = await fetchJobDescription(jobInput.trim());
+        jobDescription = await fetchJobDescription(urlInput.trim());
         fetchSpinner.succeed('Job description fetched');
       } catch (err) {
         fetchSpinner.fail();
@@ -414,6 +454,17 @@ async function collectJobDescription(
         return null;
       }
     } else {
+      const jobInput =
+        (await editor({
+          message: primary(JOB_TEXT_PROMPT),
+          waitForUserInput: false,
+        })) ?? '';
+      if (!jobInput.trim()) {
+        console.log(
+          warn("No job description provided. Run again when you're ready.")
+        );
+        return null;
+      }
       jobDescription = sanitizeJobText(jobInput);
     }
   }
@@ -421,7 +472,7 @@ async function collectJobDescription(
   let company: string;
   let jobSlug: string;
 
-  const extractSpinner = ora('Extracting company and role...').start();
+  const extractSpinner = ora('Extracting job information...').start();
   try {
     const extracted = await extractCompanyAndJobSlug(jobDescription);
     company = extracted.company?.trim() ?? '';
@@ -496,7 +547,6 @@ export async function runResume(url?: string): Promise<void> {
   }
 
   await writeProfessionalSummary(summary);
-  console.log(info('Your professional summary is ready!'));
 
   const jobData = await collectJobDescription(url);
   if (!jobData) {
@@ -504,7 +554,6 @@ export async function runResume(url?: string): Promise<void> {
   }
 
   const { jobDescription, company, jobSlug } = jobData;
-  console.log(info('Job description received.'));
 
   const { summary: finalSummary, exitReason } = await runClarificationLoop(
     summary,
@@ -514,15 +563,47 @@ export async function runResume(url?: string): Promise<void> {
   await writeProfessionalSummary(finalSummary);
 
   if (exitReason === 'early') {
-    console.log(info('Great match! Your profile is ready for the next step.'));
+    console.log();
+    console.log(dim('Great match! Your profile is ready for the next step.'));
+    console.log();
   } else if (exitReason === 'maxRounds') {
     console.log(
-      info(
+      dim(
         "We've reached the max rounds. Your profile is ready for the next step."
       )
     );
   } else {
-    console.log(info('Your profile has been saved.'));
+    console.log(dim('Your profile has been saved.'));
+  }
+
+  const config = await readConfig();
+  const home = homedir();
+  const resolvePath = (p: string) =>
+    p.startsWith('~') ? p.replace(/^~/, home) : p;
+
+  let saveDir: string;
+  let userSavePath: string;
+  if (config.resumeSaveDir) {
+    const answer =
+      (await input({
+        message: primary(SAVE_LOCATION_PROMPT),
+        default: config.resumeSaveDir,
+      })) ?? '';
+    userSavePath = answer.trim() ? answer.trim() : config.resumeSaveDir;
+    saveDir = resolvePath(userSavePath);
+    await writeConfig({ resumeSaveDir: userSavePath });
+  } else {
+    let answer: string;
+    do {
+      answer =
+        (await input({ message: primary(SAVE_LOCATION_PROMPT) }))?.trim() ?? '';
+      if (!answer) {
+        console.log(warn('Please enter a directory path to save your resume.'));
+      }
+    } while (!answer);
+    userSavePath = answer;
+    saveDir = resolvePath(answer);
+    await writeConfig({ resumeSaveDir: answer });
   }
 
   const resumeSpinner = ora('Generating your tailored resume...').start();
@@ -531,10 +612,10 @@ export async function runResume(url?: string): Promise<void> {
       finalSummary,
       jobDescription
     );
-    await ensureResumesDirExists();
-    const outputPath = getResumeFilePath(company, jobSlug);
+    const outputPath = getResumeFilePath(company, jobSlug, saveDir);
     await renderResumeToPdf(tailoredResume, outputPath);
-    resumeSpinner.succeed(`Resume saved to: ${outputPath}`);
+    const displayPath = `${userSavePath.replace(/\/$/, '')}/${basename(outputPath)}`;
+    resumeSpinner.succeed(`Resume saved to: ${cyan(displayPath)}`);
   } catch (err) {
     resumeSpinner.fail();
     console.error(error(err instanceof Error ? err.message : String(err)));
