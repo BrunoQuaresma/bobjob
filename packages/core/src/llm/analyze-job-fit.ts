@@ -13,7 +13,7 @@ export type JobFitAnalysis = z.infer<typeof JobFitAnalysisSchema>;
 
 const SYSTEM_PROMPT = `You are an expert at evaluating job fit. Compare the candidate's professional summary against the job description and provide:
 1. A match score from 0 to 100 based on skills, experience, and education fit.
-2. A brief rationale (1-2 sentences) explaining the score.
+2. A brief rationale: one short sentence (max 25 words) explaining the score. Be concise.
 3. Zero to five specific, actionable clarification questions the candidate could answer to improve their match. Ask about gaps, relevant experience, or skills that could strengthen their application.
 - Return an empty clarificationQuestions array when the match is strong (score >= 85).
 - Questions should be concrete and answerable (e.g. "How many years have you led distributed teams?" not "Tell me more about leadership.").`;
