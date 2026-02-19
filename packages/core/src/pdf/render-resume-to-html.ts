@@ -1,7 +1,11 @@
 import Handlebars from 'handlebars';
+import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ProfessionalSummary } from '../types/professional-summary';
+
+const require = createRequire(import.meta.url);
+const GEIST_FONT_PLACEHOLDER = '__GEIST_FONT_FACES__';
 
 const MONTHS = [
   'Jan',
@@ -48,11 +52,41 @@ function registerHandlebarsHelpers(): void {
   Handlebars.registerHelper('hasItems', (arr: unknown) => {
     return Array.isArray(arr) && arr.length > 0;
   });
+  Handlebars.registerHelper('hasContactInfo', (ctx: unknown) => {
+    const c = ctx as {
+      contact?: { email?: string; phone?: string };
+      location?: string;
+      socials?: { linkedin?: string; github?: string; portfolio?: string };
+    };
+    const hasContact = c?.contact && (c.contact.email || c.contact.phone);
+    const hasLocation =
+      typeof c?.location === 'string' && c.location.trim().length > 0;
+    const hasSocials =
+      c?.socials &&
+      (c.socials.linkedin || c.socials.github || c.socials.portfolio);
+    return !!(hasContact || hasLocation || hasSocials);
+  });
 }
 
 registerHandlebarsHelpers();
 
 const TEMPLATE_FILENAME = 'resume-template.hbs';
+
+async function getGeistFontFaces(): Promise<string> {
+  try {
+    const font400Path =
+      require.resolve('@fontsource/geist/files/geist-latin-400-normal.woff2');
+    const font600Path =
+      require.resolve('@fontsource/geist/files/geist-latin-600-normal.woff2');
+    const [font400, font600] = await Promise.all([
+      readFile(font400Path).then((b) => b.toString('base64')),
+      readFile(font600Path).then((b) => b.toString('base64')),
+    ]);
+    return `@font-face{font-family:'Geist';font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,${font400}) format('woff2')}@font-face{font-family:'Geist';font-style:normal;font-weight:600;font-display:swap;src:url(data:font/woff2;base64,${font600}) format('woff2')}`;
+  } catch {
+    return '';
+  }
+}
 
 export type RenderResumeToHtmlOptions = {
   /** For testing: use this instead of loading template from disk */
@@ -76,6 +110,13 @@ export async function renderResumeToHtml(
   } else {
     const templatePath = join(import.meta.dir, TEMPLATE_FILENAME);
     templateContent = await readFile(templatePath, 'utf-8');
+    if (templateContent.includes(GEIST_FONT_PLACEHOLDER)) {
+      const fontFaces = await getGeistFontFaces();
+      templateContent = templateContent.replace(
+        GEIST_FONT_PLACEHOLDER,
+        fontFaces
+      );
+    }
   }
 
   const template = Handlebars.compile(templateContent);

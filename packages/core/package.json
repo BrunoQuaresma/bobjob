@@ -9,6 +9,7 @@
     "test": "bun test"
   },
   "devDependencies": {
+    "@fontsource/geist": "^5.2.8",
     "@types/bun": "latest",
     "typescript": "^5"
   },
