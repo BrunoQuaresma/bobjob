@@ -5,9 +5,13 @@
   "workspaces": [
     "packages/*"
   ],
+  "dependencies": {
+    "@bobjob/core": "workspace:*"
+  },
   "scripts": {
     "bobjob": "bun run --cwd packages/cli start",
     "resume": "bun run --cwd packages/cli resume",
+    "generate-test-resume": "bun run scripts/generate-test-resume.ts",
     "core:test": "bun run --cwd packages/core test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
