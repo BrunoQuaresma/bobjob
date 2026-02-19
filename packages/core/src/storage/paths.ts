@@ -38,8 +38,9 @@ export function getResumeFilePath(
       .replace(/[^a-z0-9-]/g, '')
       .replace(/-+/g, '-')
       .replace(/^-+|-+$/g, '');
+  const singleRole = jobSlug.split(/\s*\/\s*/)[0]?.trim() || jobSlug;
   const sluggedCompany = slugify(company) || 'company';
-  const sluggedJobSlug = slugify(jobSlug) || 'role';
+  const sluggedJobSlug = slugify(singleRole) || 'role';
   const id = nanoid(5);
   const dir = baseDir ?? getResumesDir();
   return join(dir, `${sluggedCompany}-${sluggedJobSlug}-${id}.pdf`);

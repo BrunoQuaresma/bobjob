@@ -14,7 +14,7 @@ export type ExtractCompanyAndJobSlugResult = z.infer<
 const SYSTEM_PROMPT = `You are an expert at extracting job metadata from job descriptions.
 Given a job description, extract:
 1. company: The company or organization name (e.g. "Acme Corp", "Google")
-2. jobSlug: The job title or role (e.g. "Senior Software Engineer", "Product Manager")
+2. jobSlug: A single, concise job role for the filename. Pick the most relevant one—do not combine multiple roles (e.g. use "Senior Frontend Engineer" not "Senior Frontend / Full-Stack Engineer").
 
 Return both as plain strings. If the job description does not clearly state the company or role, use your best inference from context. Never return empty strings.`;
 

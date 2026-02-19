@@ -42,6 +42,16 @@ describe('paths', () => {
     );
   });
 
+  it('getResumeFilePath uses first role when job slug contains slash', async () => {
+    const { getResumeFilePath } = await import('./paths');
+    const path = getResumeFilePath(
+      'Hopper',
+      'Senior Frontend / Full-Stack Engineer'
+    );
+    expect(path).toMatch(/hopper-senior-frontend-/);
+    expect(path).not.toContain('full-stack');
+  });
+
   it('getResumeFilePath returns path with kebab-case company and job slug', async () => {
     const { getResumeFilePath } = await import('./paths');
     const path = getResumeFilePath('Acme Corp', 'Senior Engineer');
