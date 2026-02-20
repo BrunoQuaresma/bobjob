@@ -265,7 +265,7 @@ async function fillGaps(
 
 type ClarificationLoopResult = {
   summary: ProfessionalSummary;
-  exitReason: 'early' | 'maxRounds' | 'error';
+  exitReason: 'early' | 'cancelled' | 'maxRounds' | 'error';
 };
 
 async function mergeWithSpinner(
@@ -348,7 +348,7 @@ async function runClarificationLoop(
       try {
         answer = (await input({ message })) ?? '';
       } catch {
-        // User cancelled (Ctrl+C) - treat as done
+        // User cancelled (Ctrl+C) - merge any answers so far, but don't show "Great match!"
         if (clarifications.length > 0) {
           try {
             currentSummary = await mergeWithSpinner(
@@ -363,7 +363,7 @@ async function runClarificationLoop(
             );
           }
         }
-        return { summary: currentSummary, exitReason: 'early' };
+        return { summary: currentSummary, exitReason: 'cancelled' };
       }
 
       if (isDoneInput(answer)) {
@@ -566,6 +566,8 @@ export async function runResume(url?: string): Promise<void> {
     console.log();
     console.log(dim('Great match! Your profile is ready for the next step.'));
     console.log();
+  } else if (exitReason === 'cancelled') {
+    // User pressed Ctrl+C - no message
   } else if (exitReason === 'maxRounds') {
     console.log(
       dim(
