@@ -23,6 +23,7 @@ Rules:
 - Use ISO date format for dates (e.g. 2020-01, 2024-06).
 - Reword highlights to align with job keywords where natural.
 - For fields you cannot find, use empty string "" or empty array [].
+- Write naturally, as a human would. Avoid em dashes (—) and hyphens in prose; use commas, periods, or rephrase instead. Text should feel human while remaining ATS-friendly.
 - Return valid JSON matching the schema.`;
 
 /**
