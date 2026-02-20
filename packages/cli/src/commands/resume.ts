@@ -265,7 +265,7 @@ async function fillGaps(
 
 type ClarificationLoopResult = {
   summary: ProfessionalSummary;
-  exitReason: 'early' | 'cancelled' | 'maxRounds' | 'error';
+  exitReason: 'early' | 'cancelled' | 'exited' | 'maxRounds' | 'error';
 };
 
 async function mergeWithSpinner(
@@ -321,6 +321,28 @@ async function runClarificationLoop(
       analysis.clarificationQuestions.length === 0
     ) {
       return { summary: currentSummary, exitReason: 'early' };
+    }
+
+    console.log();
+    let choice: 'followUp' | 'generate' | 'exit';
+    try {
+      choice = await select({
+        message: primary('What would you like to do?'),
+        choices: [
+          { name: 'Answer follow-up questions', value: 'followUp' },
+          { name: 'Generate resume', value: 'generate' },
+          { name: 'Exit', value: 'exit' },
+        ],
+      });
+    } catch {
+      return { summary: currentSummary, exitReason: 'cancelled' };
+    }
+
+    if (choice === 'generate') {
+      return { summary: currentSummary, exitReason: 'early' };
+    }
+    if (choice === 'exit') {
+      return { summary: currentSummary, exitReason: 'exited' };
     }
 
     console.log();
@@ -561,6 +583,10 @@ export async function runResume(url?: string): Promise<void> {
   );
 
   await writeProfessionalSummary(finalSummary);
+
+  if (exitReason === 'exited') {
+    return;
+  }
 
   if (exitReason === 'early') {
     console.log();
