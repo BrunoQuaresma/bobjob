@@ -12,6 +12,7 @@ Extract all available information into the provided JSON schema.
 - Use ISO date format for dates (e.g. 2020-01, 2024-06). Use "present" or the current month if the role is ongoing.
 - For fields you cannot find, use empty string "" or empty array [].
 - For experiences and education, extract title, company/school, dates, and any highlights or descriptions.
+- Summarize descriptions and highlights concisely; avoid verbatim long paragraphs. Keep the summary paragraph to 1–2 short sentences.
 - Keep the structure clean and well-organized.`;
 
 /**

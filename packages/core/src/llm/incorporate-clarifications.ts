@@ -12,6 +12,7 @@ const SYSTEM_PROMPT = `You are an expert at merging professional information. Gi
 Rules:
 - Preserve all existing data; do not remove or alter information unless the clarification directly updates it.
 - Add or enrich experiences, education, highlights, or descriptions based on the answers.
+- Keep experience descriptions and highlights short and direct; prefer bullets over long prose. Keep the summary paragraph to 1–2 short sentences.
 - Use ISO date format for dates (e.g. 2020-01, 2024-06).
 - For fields you cannot find, use empty string "" or empty array [].
 - Return valid JSON matching the schema.

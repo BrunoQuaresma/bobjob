@@ -14,9 +14,9 @@ Rules:
 - Take the candidate's full professional summary and the job description.
 - Produce a job-tailored resume: emphasize experiences, education, and skills most relevant to the role.
 - Title: Use a single, concise professional title. Pick the most relevant one for the job (e.g. "Senior Software Engineer" or "Frontend Engineer"). Do not use multiple titles or slashes.
-- Generate a brief summary paragraph (2-3 sentences) tailored to the role, highlighting the candidate's fit.
+- Summary (Profile section): Keep to 1–2 short sentences max. Be direct and punchy; avoid filler.
 - Skills: List at most 8 skills, the most relevant for the job. Each skill must be simple and standalone—no parentheses or qualifiers. E.g. use "React", "TypeScript", "Performance" as separate items, not "React (hooks, performance optimization)".
-- Experience and project descriptions: The first sentence or paragraph of each experience and project must provide context—what the product, company, or project is about—before listing achievements.
+- Experience and project content: Keep descriptions to 1–2 short sentences max; omit if highlights suffice. Prefer bullet highlights over paragraphs. Each highlight: one clear achievement or responsibility, no filler. Limit to 3–5 highlights per experience or project, keeping only the most relevant for the job.
 - Keep reverse chronological order for experiences and education (do not reorder by relevance).
 - Summarize or trim content to fit a 1-page resume; omit less relevant experiences/education entries entirely if needed to fit.
 - Preserve required fields: name, contact.email, at least one experience or education.
