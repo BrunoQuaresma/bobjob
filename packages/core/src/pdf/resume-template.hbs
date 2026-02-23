@@ -141,6 +141,15 @@
         font-size: var(--text-sm);
         color: var(--text-muted-color);
       }
+      .cert-meta {
+        font-size: var(--text-sm);
+        margin-top: 0.15em;
+        color: var(--text-muted-color);
+        display: flex;
+        align-items: baseline;
+        gap: 0.35em;
+        flex-wrap: wrap;
+      }
       .skills-list {
         margin: 0;
         padding-left: var(--spacing-lg);
@@ -250,8 +259,10 @@
             {{#each certificates}}
               <div class='certificate-item'>
                 <div class='item-cert-name'>{{name}}</div>
-                <div class='item-cert-issuer'>{{issuer}}</div>
-                {{#if date}}<div class='item-date'>{{formatDate date}}</div>{{/if}}
+                <div class='cert-meta'>
+                  <span>{{issuer}}</span>
+                  {{#if date}}<span class='item-date'> · {{formatDate date}}</span>{{/if}}
+                </div>
               </div>
             {{/each}}
           </section>
