@@ -1,4 +1,5 @@
 export * from './types/professional-summary';
+export { mergeExperiencesByCompany } from './experiences/merge-experiences-by-company';
 export * from './storage/paths';
 export {
   readProfessionalSummary,

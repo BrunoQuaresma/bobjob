@@ -8,6 +8,7 @@ import {
   getResumeFilePath,
   hasMinimumFields,
   incorporateClarificationsIntoSummary,
+  mergeExperiencesByCompany,
   readConfig,
   readProfessionalSummary,
   renderResumeToPdf,
@@ -131,10 +132,10 @@ async function fillGaps(
           ) {
             current = {
               ...current,
-              experiences: [
+              experiences: mergeExperiencesByCompany([
                 ...(current.experiences ?? []),
                 ...parsed.experiences,
-              ],
+              ]),
             };
           } else if (
             Array.isArray(parsed.education) &&

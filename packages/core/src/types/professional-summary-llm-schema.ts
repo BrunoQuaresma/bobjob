@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mergeExperiencesByCompany } from '../experiences/merge-experiences-by-company';
 import type { ProfessionalSummary } from './professional-summary';
 import { ProfessionalSummarySchema } from './professional-summary';
 
@@ -97,7 +98,7 @@ export function transformLLMOutputToSummary(
         }
       : undefined;
 
-  const experiences = (raw.experiences ?? [])
+  const rawExperiences = (raw.experiences ?? [])
     .filter((e) => e.title && e.company && e.startDate)
     .map((e) => ({
       title: e.title,
@@ -108,6 +109,7 @@ export function transformLLMOutputToSummary(
       ...(e.description && { description: e.description }),
       ...(e.highlights?.length && { highlights: e.highlights }),
     }));
+  const experiences = mergeExperiencesByCompany(rawExperiences);
 
   const education = (raw.education ?? [])
     .filter((e) => e.degree && e.school && e.startDate && e.endDate)
