@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { join } from 'node:path';
+import { runRefine } from './commands/refine';
 import { runResume } from './commands/resume';
 import { error } from './output';
 
@@ -22,6 +23,13 @@ program
   .argument('[url]', 'Job description URL (or provide in chat)')
   .action(async (url: string | undefined) => {
     await runResume(url);
+  });
+
+program
+  .command('refine')
+  .description('Refine your professional summary with additional information')
+  .action(async () => {
+    await runRefine();
   });
 
 program.parseAsync().catch((err) => {
