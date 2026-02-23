@@ -2,7 +2,6 @@ import {
   analyzeJobFit,
   ensureBobJobDirExists,
   extractCompanyAndJobSlug,
-  extractTextFromPdf,
   fetchJobDescription,
   generateJobTailoredResume,
   generateSummaryFromText,
@@ -20,12 +19,11 @@ import {
 } from '@bobjob/core';
 import type { ProfessionalSummary } from '@bobjob/core';
 import { homedir } from 'node:os';
-import { readdir } from 'node:fs/promises';
-import { basename, join } from 'node:path';
-import { setTimeout } from 'node:timers/promises';
-import { editor, input, search, select } from '@inquirer/prompts';
+import { basename } from 'node:path';
+import { editor, input, select } from '@inquirer/prompts';
 import ora from 'ora';
 import { ask } from '../chat/prompt';
+import { collectRawTextFromSource } from './collect-source-text';
 import { cyan, dim, error, primary, success, warn } from '../output';
 
 const DONE_KEYWORDS = ['done', 'skip', 'finish'];
@@ -57,11 +55,6 @@ const JOB_SOURCE_QUESTION =
 const JOB_URL_PROMPT = 'Enter the job URL';
 const JOB_TEXT_PROMPT = 'Paste the job description';
 
-const SOURCE_QUESTION = 'How would you like to provide your resume?';
-const PDF_SEARCH_PROMPT = 'Search for your resume PDF';
-const PDF_SEARCH_MAX_DEPTH = 4;
-const TEXT_PROMPT =
-  'Paste your resume or professional info (one line for now):';
 const NAME_PROMPT = "What's your full name?";
 const EMAIL_PROMPT = "What's your email?";
 const EXPERIENCE_PROMPT =
@@ -70,99 +63,9 @@ const COMPANY_PROMPT = 'What company is this for?';
 const ROLE_PROMPT = 'What role is this for?';
 const SAVE_LOCATION_PROMPT = 'Where do you want to save your resume?';
 
-async function findPdfFiles(
-  dir: string,
-  depth: number,
-  maxDepth: number
-): Promise<string[]> {
-  if (depth >= maxDepth) return [];
-  const pdfs: string[] = [];
-  try {
-    const entries = await readdir(dir, { withFileTypes: true });
-    for (const e of entries) {
-      if (e.isSymbolicLink()) continue; // Avoid following symlinks (path traversal)
-      const full = join(dir, e.name);
-      if (e.isDirectory() && !e.name.startsWith('.')) {
-        pdfs.push(...(await findPdfFiles(full, depth + 1, maxDepth)));
-      } else if (e.isFile() && e.name.toLowerCase().endsWith('.pdf')) {
-        pdfs.push(full);
-      }
-    }
-  } catch {
-    // Skip directories we can't read (e.g. permission denied)
-  }
-  return pdfs;
-}
-
 async function collectSummaryFromSource(): Promise<ProfessionalSummary | null> {
-  const choice = await select({
-    message: primary(SOURCE_QUESTION),
-    choices: [
-      { name: 'Import PDF', value: 'pdf' },
-      { name: 'Paste text', value: 'text' },
-    ],
-  });
-
-  let rawText: string;
-
-  if (choice === 'text') {
-    const text = await ask(TEXT_PROMPT);
-    if (!text.trim()) {
-      console.log(warn("No text provided. Try again when you're ready."));
-      return null;
-    }
-    rawText = text;
-  } else {
-    const home = homedir();
-    let cachedPdfs: string[] | null = null;
-
-    const filePath = await search({
-      message: primary(PDF_SEARCH_PROMPT),
-      source: async (term, { signal }) => {
-        await setTimeout(300);
-        if (signal.aborted) return [];
-
-        if (!cachedPdfs) {
-          cachedPdfs = await findPdfFiles(home, 0, PDF_SEARCH_MAX_DEPTH);
-        }
-
-        const lower = (term ?? '').trim().toLowerCase();
-        const filterTerm =
-          lower === '' || lower === '~' ? '' : lower.replace(/^~\/?/, '');
-
-        const filtered = filterTerm
-          ? cachedPdfs.filter((p) => {
-              const displayPath = p.replace(home, '~').toLowerCase();
-              const pathSegments = displayPath.split(/[/\\]/);
-              return (
-                displayPath.includes(filterTerm) ||
-                pathSegments.some((seg) => seg.includes(filterTerm))
-              );
-            })
-          : cachedPdfs;
-
-        return filtered.slice(0, 50).map((path) => ({
-          value: path,
-          name: path.replace(home, '~'),
-        }));
-      },
-    });
-
-    if (!filePath?.trim()) {
-      console.log(warn("No file selected. Try again when you're ready."));
-      return null;
-    }
-    const resolved = filePath.replace(/^~/, home);
-    const extractSpinner = ora('Extracting text from PDF...').start();
-    try {
-      rawText = await extractTextFromPdf(resolved.trim());
-      extractSpinner.succeed('PDF extracted');
-    } catch (err) {
-      extractSpinner.fail();
-      console.error(error(err instanceof Error ? err.message : String(err)));
-      return null;
-    }
-  }
+  const rawText = await collectRawTextFromSource();
+  if (!rawText) return null;
 
   const summarySpinner = ora('Generating your professional summary...').start();
   try {
