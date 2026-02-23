@@ -492,9 +492,7 @@ export async function runResume(url?: string): Promise<void> {
   }
 
   if (exitReason === 'early') {
-    console.log();
-    console.log(dim('Great match! Your profile is ready for the next step.'));
-    console.log();
+    // No message - user said "done"
   } else if (exitReason === 'cancelled') {
     // User pressed Ctrl+C - no message
   } else if (exitReason === 'maxRounds') {
