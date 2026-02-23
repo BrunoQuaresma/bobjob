@@ -10,6 +10,7 @@
   },
   "scripts": {
     "bobjob": "bun run --cwd packages/cli start",
+    "refine": "bun run --cwd packages/cli src/index.ts refine",
     "resume": "bun run --cwd packages/cli resume",
     "generate-test-resume": "bun run scripts/generate-test-resume.ts",
     "core:test": "bun run --cwd packages/core test",
