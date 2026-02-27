@@ -474,80 +474,106 @@ export async function runResume(url?: string): Promise<void> {
 
   await writeProfessionalSummary(summary);
 
-  const jobData = await collectJobDescription(url);
-  if (!jobData) {
-    return;
-  }
+  let currentUrl: string | undefined = url;
 
-  const { jobDescription, company, jobSlug } = jobData;
+  while (true) {
+    const jobData = await collectJobDescription(currentUrl);
+    if (!jobData) {
+      return;
+    }
+    currentUrl = undefined;
 
-  const { summary: finalSummary, exitReason } = await runClarificationLoop(
-    summary,
-    jobDescription
-  );
+    const { jobDescription, company, jobSlug } = jobData;
 
-  await writeProfessionalSummary(finalSummary);
-
-  if (exitReason === 'exited') {
-    return;
-  }
-
-  if (exitReason === 'early') {
-    // No message - user said "done"
-  } else if (exitReason === 'cancelled') {
-    // User pressed Ctrl+C - no message
-  } else if (exitReason === 'maxRounds') {
-    console.log(
-      dim(
-        "We've reached the max rounds. Your profile is ready for the next step."
-      )
-    );
-  } else {
-    console.log(dim('Your profile has been saved.'));
-  }
-
-  const config = await readConfig();
-  const home = homedir();
-  const resolvePath = (p: string) =>
-    p.startsWith('~') ? p.replace(/^~/, home) : p;
-
-  let saveDir: string;
-  let userSavePath: string;
-  if (config.resumeSaveDir) {
-    const answer =
-      (await input({
-        message: primary(SAVE_LOCATION_PROMPT),
-        default: config.resumeSaveDir,
-      })) ?? '';
-    userSavePath = answer.trim() ? answer.trim() : config.resumeSaveDir;
-    saveDir = resolvePath(userSavePath);
-    await writeConfig({ resumeSaveDir: userSavePath });
-  } else {
-    let answer: string;
-    do {
-      answer =
-        (await input({ message: primary(SAVE_LOCATION_PROMPT) }))?.trim() ?? '';
-      if (!answer) {
-        console.log(warn('Please enter a directory path to save your resume.'));
-      }
-    } while (!answer);
-    userSavePath = answer;
-    saveDir = resolvePath(answer);
-    await writeConfig({ resumeSaveDir: answer });
-  }
-
-  const resumeSpinner = ora('Generating your tailored resume...').start();
-  try {
-    const tailoredResume = await generateJobTailoredResume(
-      finalSummary,
+    const { summary: finalSummary, exitReason } = await runClarificationLoop(
+      summary,
       jobDescription
     );
-    const outputPath = getResumeFilePath(company, jobSlug, saveDir);
-    await renderResumeToPdf(tailoredResume, outputPath);
-    const displayPath = `${userSavePath.replace(/\/$/, '')}/${basename(outputPath)}`;
-    resumeSpinner.succeed(`Resume saved to: ${cyan(displayPath)}`);
-  } catch (err) {
-    resumeSpinner.fail();
-    console.error(error(err instanceof Error ? err.message : String(err)));
+
+    await writeProfessionalSummary(finalSummary);
+
+    if (exitReason === 'exited') {
+      return;
+    }
+
+    if (exitReason === 'early') {
+      // No message - user said "done"
+    } else if (exitReason === 'cancelled') {
+      // User pressed Ctrl+C - no message
+    } else if (exitReason === 'maxRounds') {
+      console.log(
+        dim(
+          "We've reached the max rounds. Your profile is ready for the next step."
+        )
+      );
+    } else {
+      console.log(dim('Your profile has been saved.'));
+    }
+
+    console.log();
+    const config = await readConfig();
+    const home = homedir();
+    const resolvePath = (p: string) =>
+      p.startsWith('~') ? p.replace(/^~/, home) : p;
+
+    let saveDir: string;
+    let userSavePath: string;
+    if (config.resumeSaveDir) {
+      const answer =
+        (await input({
+          message: primary(SAVE_LOCATION_PROMPT),
+          default: config.resumeSaveDir,
+        })) ?? '';
+      userSavePath = answer.trim() ? answer.trim() : config.resumeSaveDir;
+      saveDir = resolvePath(userSavePath);
+      await writeConfig({ resumeSaveDir: userSavePath });
+    } else {
+      let answer: string;
+      do {
+        answer =
+          (await input({ message: primary(SAVE_LOCATION_PROMPT) }))?.trim() ??
+          '';
+        if (!answer) {
+          console.log(
+            warn('Please enter a directory path to save your resume.')
+          );
+        }
+      } while (!answer);
+      userSavePath = answer;
+      saveDir = resolvePath(answer);
+      await writeConfig({ resumeSaveDir: answer });
+    }
+
+    const resumeSpinner = ora('Generating your tailored resume...').start();
+    let success = false;
+    try {
+      const tailoredResume = await generateJobTailoredResume(
+        finalSummary,
+        jobDescription
+      );
+      const outputPath = getResumeFilePath(company, jobSlug, saveDir);
+      await renderResumeToPdf(tailoredResume, outputPath);
+      const displayPath = `${userSavePath.replace(/\/$/, '')}/${basename(outputPath)}`;
+      resumeSpinner.succeed(`Resume saved to: ${cyan(displayPath)}`);
+      success = true;
+    } catch (err) {
+      resumeSpinner.fail();
+      console.error(error(err instanceof Error ? err.message : String(err)));
+    }
+
+    if (success) {
+      const choice = await select({
+        message: primary('What would you like to do next?'),
+        choices: [
+          { name: 'Generate another resume', value: 'another' },
+          { name: 'Exit', value: 'exit' },
+        ],
+      });
+      if (choice === 'exit') return;
+    } else {
+      return;
+    }
+
+    summary = finalSummary;
   }
 }
