@@ -510,7 +510,6 @@ export async function runResume(url?: string): Promise<void> {
       console.log(dim('Your profile has been saved.'));
     }
 
-    console.log();
     const config = await readConfig();
     const home = homedir();
     const resolvePath = (p: string) =>
