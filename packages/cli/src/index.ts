@@ -1,16 +1,14 @@
 #!/usr/bin/env bun
+import { readFileSync } from 'node:fs';
 import { select } from '@inquirer/prompts';
 import { Command } from 'commander';
-import { join } from 'node:path';
 import { runRefine } from './commands/refine';
 import { runResume } from './commands/resume';
 import { error } from './output';
 
-const pkg = (await Bun.file(
-  join(import.meta.dir, '../package.json')
-).json()) as {
-  version: string;
-};
+const pkg = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
+) as { version: string };
 
 const program = new Command();
 
