@@ -1,3 +1,4 @@
+import { select } from '@inquirer/prompts';
 import { Command } from 'commander';
 import { join } from 'node:path';
 import { runRefine } from './commands/refine';
@@ -16,6 +17,25 @@ program
   .name('bobjob')
   .description('Bob Job — Your AI job-search assistant')
   .version(pkg.version);
+
+program.action(async () => {
+  const command = await select({
+    message: 'What would you like to do?',
+    choices: [
+      { name: 'Generate a tailored resume for a job', value: 'resume' },
+      { name: 'Refine your professional summary', value: 'refine' },
+    ],
+  });
+
+  switch (command) {
+    case 'resume':
+      await runResume();
+      break;
+    case 'refine':
+      await runRefine();
+      break;
+  }
+});
 
 program
   .command('resume')
