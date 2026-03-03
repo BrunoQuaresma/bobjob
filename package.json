@@ -1,6 +1,7 @@
 {
   "name": "bobjob",
   "type": "module",
+  "license": "MIT",
   "private": true,
   "workspaces": [
     "packages/*"
