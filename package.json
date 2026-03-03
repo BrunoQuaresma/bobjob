@@ -3,6 +3,14 @@
   "type": "module",
   "license": "MIT",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BrunoQuaresma/bobjob.git"
+  },
+  "homepage": "https://github.com/BrunoQuaresma/bobjob#readme",
+  "bugs": {
+    "url": "https://github.com/BrunoQuaresma/bobjob/issues"
+  },
   "workspaces": [
     "packages/*"
   ],

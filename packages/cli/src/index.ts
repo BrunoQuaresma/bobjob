@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import { select } from '@inquirer/prompts';
 import { Command } from 'commander';
 import { join } from 'node:path';

@@ -1,6 +1,28 @@
 {
   "name": "@bobjob/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "AI-powered CLI that generates job-tailored PDF resumes",
+  "author": "Bruno Quaresma",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BrunoQuaresma/bobjob.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/BrunoQuaresma/bobjob#readme",
+  "bugs": {
+    "url": "https://github.com/BrunoQuaresma/bobjob/issues"
+  },
+  "keywords": [
+    "resume",
+    "cli",
+    "ai",
+    "job",
+    "pdf"
+  ],
+  "files": [
+    "src"
+  ],
   "type": "module",
   "bin": {
     "bobjob": "./src/index.ts"
