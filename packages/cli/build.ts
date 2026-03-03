@@ -56,4 +56,6 @@ cpSync(
   join(outputDir, 'resume-template.hbs')
 );
 
+cpSync(join(__dirname, '..', '..', 'README.md'), join(__dirname, 'README.md'));
+
 console.log('Build complete:', output.path);
