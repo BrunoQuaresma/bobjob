@@ -28,29 +28,89 @@ flowchart LR
 
 ## Quick Start
 
-**Prerequisites:** [Bun](https://bun.sh) runtime, [OpenAI API key](https://platform.openai.com/api-keys)
+**Prerequisites:** Node.js 18+, [OpenAI API key](https://platform.openai.com/api-keys)
 
 ```bash
-bun install
 export OPENAI_API_KEY=your-key-here
-bun run bobjob
+npx bobjob
 ```
 
-Or run directly:
-
-```bash
-bunx bobjob resume
-# or install globally
-bun install -g . && bobjob resume
-```
+That's it — no install required.
 
 ## Commands
 
-| Command               | Description                                                  |
-| --------------------- | ------------------------------------------------------------ |
-| `bobjob`              | Interactive menu                                             |
-| `bobjob resume [url]` | Generate a tailored resume (optionally pass job URL)         |
-| `bobjob refine`       | Refine your professional summary with additional text or PDF |
+| Command                   | Description                                                   |
+| ------------------------- | ------------------------------------------------------------- |
+| `npx bobjob`              | Interactive menu                                              |
+| `npx bobjob resume [url]` | Generate a tailored resume (optionally pass job URL directly) |
+| `npx bobjob refine`       | Refine your professional summary with additional text or PDF  |
+
+## Demo
+
+### Generate a resume from a job URL
+
+Pass the URL directly and BobJob fetches, parses, and tailors everything in one shot:
+
+```
+$ npx bobjob resume https://jobs.example.com/senior-engineer
+
+(Job URL: https://jobs.example.com/senior-engineer)
+? How would you like to provide your resume?
+  ❯ Upload a PDF
+    Paste text
+✔ Generating your professional summary...
+✔ Job description fetched
+✔ Extracting job information...
+
+Match score: 72/100
+
+Your backend experience is strong but the listing emphasises
+Kubernetes and CI/CD pipeline design. Adding detail about your
+infrastructure work would raise the score.
+
+? What would you like to do?
+  ❯ Answer follow-up questions
+    Generate resume
+    Exit
+
+Follow-up questions to strengthen your match. Press Ctrl+C to skip.
+
+? Have you designed or maintained CI/CD pipelines? (1/3)
+> Yes — built GitHub Actions workflows for three services at Acme...
+
+✔ Incorporating your answers...
+
+Match score: 91/100
+
+? Where do you want to save your resume? ~/Documents/resumes
+✔ Resume saved to: ~/Documents/resumes/example-senior-engineer-a1b2c.pdf
+```
+
+### Interactive mode
+
+Run without arguments to get a guided menu:
+
+```
+$ npx bobjob
+
+? What would you like to do?
+  ❯ Generate a tailored resume for a job
+    Refine your professional summary
+```
+
+### Refine your professional summary
+
+Already have a summary? Add new experience or an updated resume to keep it current:
+
+```
+$ npx bobjob refine
+
+? How would you like to provide additional information?
+  ❯ Upload a PDF
+    Paste text
+✔ Refining your professional summary...
+✔ Professional summary updated
+```
 
 ## Storage
 
