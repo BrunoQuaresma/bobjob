@@ -39,11 +39,12 @@ That's it — no install required.
 
 ## Commands
 
-| Command                   | Description                                                   |
-| ------------------------- | ------------------------------------------------------------- |
-| `npx bobjob`              | Interactive menu                                              |
-| `npx bobjob resume [url]` | Generate a tailored resume (optionally pass job URL directly) |
-| `npx bobjob refine`       | Refine your professional summary with additional text or PDF  |
+| Command                        | Description                                                   |
+| ------------------------------ | ------------------------------------------------------------- |
+| `npx bobjob`                   | Interactive menu                                              |
+| `npx bobjob resume [url]`      | Generate a tailored resume (optionally pass job URL directly) |
+| `npx bobjob refine`            | Refine your professional summary with additional text or PDF  |
+| `npx bobjob --debug [command]` | Show full error stack traces for troubleshooting              |
 
 ## Demo
 
@@ -121,6 +122,17 @@ User data lives in `~/.bobjob`:
 | `professional-summary.json` | Your profile (name, contact, experience, education) |
 | `config.json`               | User preferences (e.g. resume save directory)       |
 | `resumes/`                  | Generated PDFs (`<company>-<job-slug>-<id>.pdf`)    |
+
+## Troubleshooting
+
+Add `--debug` before any command to print the full error stack trace and root cause when something goes wrong:
+
+```bash
+npx bobjob --debug
+npx bobjob --debug resume https://jobs.example.com/role
+```
+
+> Note: `--debug` must be placed **before** the subcommand (`npx bobjob --debug resume`, not `npx bobjob resume --debug`).
 
 ## Project Structure
 
