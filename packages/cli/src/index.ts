@@ -4,7 +4,7 @@ import { select } from '@inquirer/prompts';
 import { Command } from 'commander';
 import { runRefine } from './commands/refine';
 import { runResume } from './commands/resume';
-import { error } from './output';
+import { error, printDebugError } from './output';
 
 const pkg = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf-8')
@@ -15,9 +15,12 @@ const program = new Command();
 program
   .name('bobjob')
   .description('Bob Job — Your AI job-search assistant')
-  .version(pkg.version);
+  .version(pkg.version)
+  .option('--debug', 'Show detailed error output for troubleshooting');
 
 program.action(async () => {
+  const { debug } = program.opts<{ debug?: boolean }>();
+
   const command = await select({
     message: 'What would you like to do?',
     choices: [
@@ -28,10 +31,10 @@ program.action(async () => {
 
   switch (command) {
     case 'resume':
-      await runResume();
+      await runResume(undefined, { debug });
       break;
     case 'refine':
-      await runRefine();
+      await runRefine({ debug });
       break;
   }
 });
@@ -41,18 +44,22 @@ program
   .description('Generate a tailored resume for a job')
   .argument('[url]', 'Job description URL (or provide in chat)')
   .action(async (url: string | undefined) => {
-    await runResume(url);
+    const { debug } = program.opts<{ debug?: boolean }>();
+    await runResume(url, { debug });
   });
 
 program
   .command('refine')
   .description('Refine your professional summary with additional information')
   .action(async () => {
-    await runRefine();
+    const { debug } = program.opts<{ debug?: boolean }>();
+    await runRefine({ debug });
   });
 
 program.parseAsync().catch((err) => {
+  const { debug } = program.opts<{ debug?: boolean }>();
   const message = err instanceof Error ? err.message : String(err);
   console.error(error(`Error: ${message}`));
+  if (debug) printDebugError(err);
   process.exit(1);
 });

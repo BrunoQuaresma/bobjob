@@ -25,7 +25,15 @@ import { editor, input, select } from '@inquirer/prompts';
 import ora from 'ora';
 import { ask } from '../chat/prompt';
 import { collectRawTextFromSource } from './collect-source-text';
-import { cyan, dim, error, primary, success, warn } from '../output';
+import {
+  cyan,
+  dim,
+  error,
+  primary,
+  printDebugError,
+  success,
+  warn,
+} from '../output';
 
 const DONE_KEYWORDS = ['done', 'skip', 'finish'];
 
@@ -64,7 +72,9 @@ const COMPANY_PROMPT = 'What company is this for?';
 const ROLE_PROMPT = 'What role is this for?';
 const SAVE_LOCATION_PROMPT = 'Where do you want to save your resume?';
 
-async function collectSummaryFromSource(): Promise<ProfessionalSummary | null> {
+async function collectSummaryFromSource(
+  debug?: boolean
+): Promise<ProfessionalSummary | null> {
   const rawText = await collectRawTextFromSource();
   if (!rawText) return null;
 
@@ -76,12 +86,14 @@ async function collectSummaryFromSource(): Promise<ProfessionalSummary | null> {
   } catch (err) {
     summarySpinner.fail();
     console.error(error(err instanceof Error ? err.message : String(err)));
+    if (debug) printDebugError(err);
     return null;
   }
 }
 
 async function fillGaps(
-  summary: ProfessionalSummary
+  summary: ProfessionalSummary,
+  debug?: boolean
 ): Promise<ProfessionalSummary> {
   let current = { ...summary };
 
@@ -151,11 +163,12 @@ async function fillGaps(
               warn("Couldn't parse that. Try again with a clearer format.")
             );
           }
-        } catch {
+        } catch (parseErr) {
           parseSpinner.fail();
           console.log(
             warn("Couldn't parse that. Try again with a clearer format.")
           );
+          if (debug) printDebugError(parseErr);
         }
       }
       continue;
@@ -193,7 +206,8 @@ async function mergeWithSpinner(
 
 async function runClarificationLoop(
   summary: ProfessionalSummary,
-  jobDescription: string
+  jobDescription: string,
+  debug?: boolean
 ): Promise<ClarificationLoopResult> {
   const maxRounds = 5;
   let currentSummary = summary;
@@ -207,6 +221,7 @@ async function runClarificationLoop(
     } catch (err) {
       analyzeSpinner.fail();
       console.error(error(err instanceof Error ? err.message : String(err)));
+      if (debug) printDebugError(err);
       return { summary: currentSummary, exitReason: 'error' };
     }
 
@@ -287,6 +302,7 @@ async function runClarificationLoop(
                 mergeErr instanceof Error ? mergeErr.message : String(mergeErr)
               )
             );
+            if (debug) printDebugError(mergeErr);
           }
         }
         return { summary: currentSummary, exitReason: 'cancelled' };
@@ -305,6 +321,7 @@ async function runClarificationLoop(
                 mergeErr instanceof Error ? mergeErr.message : String(mergeErr)
               )
             );
+            if (debug) printDebugError(mergeErr);
           }
         }
         return { summary: currentSummary, exitReason: 'early' };
@@ -324,6 +341,7 @@ async function runClarificationLoop(
       currentSummary = await mergeWithSpinner(currentSummary, clarifications);
     } catch (err) {
       console.error(error(err instanceof Error ? err.message : String(err)));
+      if (debug) printDebugError(err);
       return { summary: currentSummary, exitReason: 'error' };
     }
   }
@@ -338,7 +356,8 @@ type JobDescriptionResult = {
 };
 
 async function collectJobDescription(
-  url?: string
+  url?: string,
+  debug?: boolean
 ): Promise<JobDescriptionResult | null> {
   let jobDescription: string;
 
@@ -350,6 +369,7 @@ async function collectJobDescription(
     } catch (err) {
       fetchSpinner.fail();
       console.error(error(err instanceof Error ? err.message : String(err)));
+      if (debug) printDebugError(err);
       return null;
     }
   } else {
@@ -377,6 +397,7 @@ async function collectJobDescription(
       } catch (err) {
         fetchSpinner.fail();
         console.error(error(err instanceof Error ? err.message : String(err)));
+        if (debug) printDebugError(err);
         return null;
       }
     } else {
@@ -407,6 +428,7 @@ async function collectJobDescription(
   } catch (err) {
     extractSpinner.fail();
     console.error(error(err instanceof Error ? err.message : String(err)));
+    if (debug) printDebugError(err);
     company = '';
     jobSlug = '';
   }
@@ -428,7 +450,11 @@ async function collectJobDescription(
   return { jobDescription, company, jobSlug };
 }
 
-export async function runResume(url?: string): Promise<void> {
+export async function runResume(
+  url?: string,
+  options?: { debug?: boolean }
+): Promise<void> {
+  const debug = options?.debug;
   warnIfApiKeyMissing({
     onWarn: (msg) => console.warn(warn(msg)),
   });
@@ -454,14 +480,14 @@ export async function runResume(url?: string): Promise<void> {
   });
 
   if (!summary) {
-    const fromSource = await collectSummaryFromSource();
+    const fromSource = await collectSummaryFromSource(debug);
     if (!fromSource) {
       return;
     }
     summary = fromSource;
   }
 
-  summary = await fillGaps(summary);
+  summary = await fillGaps(summary, debug);
 
   if (!hasMinimumFields(summary)) {
     console.log(
@@ -477,7 +503,7 @@ export async function runResume(url?: string): Promise<void> {
   let currentUrl: string | undefined = url;
 
   while (true) {
-    const jobData = await collectJobDescription(currentUrl);
+    const jobData = await collectJobDescription(currentUrl, debug);
     if (!jobData) {
       return;
     }
@@ -487,7 +513,8 @@ export async function runResume(url?: string): Promise<void> {
 
     const { summary: finalSummary, exitReason } = await runClarificationLoop(
       summary,
-      jobDescription
+      jobDescription,
+      debug
     );
 
     await writeProfessionalSummary(finalSummary);
@@ -558,6 +585,7 @@ export async function runResume(url?: string): Promise<void> {
     } catch (err) {
       resumeSpinner.fail();
       console.error(error(err instanceof Error ? err.message : String(err)));
+      if (debug) printDebugError(err);
     }
 
     if (success) {

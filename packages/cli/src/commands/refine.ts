@@ -8,7 +8,7 @@ import {
 } from '@bobjob/core';
 import ora from 'ora';
 import { collectRawTextFromSource } from './collect-source-text';
-import { error, success, warn } from '../output';
+import { error, printDebugError, success, warn } from '../output';
 
 const NO_SUMMARY_MESSAGE =
   "You don't have a professional summary yet. Run `bobjob resume` first to create one.";
@@ -18,7 +18,8 @@ const REFINE_TEXT_PROMPT =
   'Paste your additional information (resume excerpt, notes, etc.):';
 const REFINE_PDF_PROMPT = 'Search for your PDF';
 
-export async function runRefine(): Promise<void> {
+export async function runRefine(options?: { debug?: boolean }): Promise<void> {
+  const debug = options?.debug;
   warnIfApiKeyMissing({
     onWarn: (msg) => console.warn(warn(msg)),
   });
@@ -62,5 +63,6 @@ export async function runRefine(): Promise<void> {
   } catch (err) {
     refineSpinner.fail();
     console.error(error(err instanceof Error ? err.message : String(err)));
+    if (debug) printDebugError(err);
   }
 }
